@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  adguardhome:
+    image: adguard/adguardhome
+    container_name: adguardhome
+    restart: unless-stopped
+    network_mode: "host"
+    volumes:
+      - ./conf:/opt/adguardhome/conf:ro
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    network_mode: "host"
+    volumes:
+      - ./conf:/etc/nginx:ro

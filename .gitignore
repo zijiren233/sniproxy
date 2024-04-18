@@ -1,0 +1,5 @@
+/conf
+AdGuardHome.yaml
+nginx.conf
+sniproxy.conf
+domains.txt
