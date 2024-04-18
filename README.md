@@ -154,3 +154,11 @@ cdn.usefathom.com
 
 EOF
 ```
+
+## 运行服务
+
+```bash
+bash run.sh
+```
+
+运行后，nginx会监听80和443端口，AdGuardHome会监听53和8080端口，其中53端口为dns端口，8080端口为web管理端口。
