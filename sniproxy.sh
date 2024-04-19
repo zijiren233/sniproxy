@@ -2,6 +2,11 @@
 
 set -e
 
+if [ ! -f "domains.txt" ]; then
+    echo "domains.txt not found"
+    exit 1
+fi
+
 # 清空
 >sniproxy.conf
 
@@ -55,3 +60,6 @@ done <"domains.txt"
 cat <<EOF >>sniproxy.conf
 }
 EOF
+
+mkdir -p conf
+mv -f sniproxy.conf conf/sniproxy.conf

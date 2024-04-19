@@ -5,8 +5,11 @@
 - `#` 开头的行为设置此行之后的域名的 IP 地址，用于AdGuardHome的DNS重写
 
 ```bash
+# 设置域名的IP地址
+IPS=192.168.1.1,abcd:ef01:2345:6789:abcd:ef01:2345:6789
+
 cat <<EOF > domains.txt
-#192.168.1.1,abcd:ef01:2345:6789:abcd:ef01:2345:6789
+#$IPS
 netflix.com
 netflix.net
 nflximg.com

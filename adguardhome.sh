@@ -2,6 +2,11 @@
 
 set -e
 
+if [ ! -f "domains.txt" ]; then
+    echo "domains.txt not found"
+    exit 1
+fi
+
 # 清空
 >AdGuardHome.yaml
 
@@ -212,4 +217,4 @@ schema_version: 28
 EOF
 
 mkdir -p conf
-cp -f AdGuardHome.yaml conf/AdGuardHome.yaml
+mv -f AdGuardHome.yaml conf/AdGuardHome.yaml

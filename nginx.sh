@@ -2,14 +2,19 @@
 
 set -e
 
+if [ ! -f "domains.txt" ]; then
+    echo "domains.txt not found"
+    exit 1
+fi
+
 # 清空
 >nginx.conf
 
 cat <<EOF >>nginx.conf
-user  www-data;
+user nginx;
 worker_processes auto;
-pid /run/nginx.pid;
-error_log /var/log/nginx/error.log;
+pid /var/run/nginx.pid;
+error_log /var/log/nginx/error.log notice;
 worker_rlimit_nofile 51200;
 
 events
@@ -68,4 +73,4 @@ http {
 EOF
 
 mkdir -p conf
-cp -f nginx.conf conf/nginx.conf
+mv -f nginx.conf conf/nginx.conf
