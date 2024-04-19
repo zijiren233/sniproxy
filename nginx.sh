@@ -87,6 +87,10 @@ cat <<EOF >>nginx.conf
 
         proxy_pass \$filtered_sni_name:443;
         $BIND
+
+        proxy_buffer_size 24k;
+        proxy_connect_timeout 30s;
+        proxy_timeout 90s;
     }
 }
 
