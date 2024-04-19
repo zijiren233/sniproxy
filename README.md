@@ -8,6 +8,9 @@
 # 设置域名的IP地址
 IPS=192.168.1.1,abcd:ef01:2345:6789:abcd:ef01:2345:6789
 
+# 你也可以使用下面的命令自动获取本机ip地址
+# IPS=$(echo `curl -s ifconfig.me -4`,`curl -s ifconfig.me -6`)
+
 cat <<EOF > domains.txt
 #$IPS
 netflix.com

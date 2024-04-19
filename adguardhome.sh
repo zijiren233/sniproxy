@@ -3,8 +3,8 @@
 set -e
 
 if [ ! -f "domains.txt" ]; then
-    echo "domains.txt not found"
-    exit 1
+  echo "domains.txt not found"
+  exit 1
 fi
 
 # 清空
@@ -173,6 +173,9 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 
   for IP in $(echo $IPS | sed "s/,/ /g"); do
     IP=$(echo $IP | xargs)
+    if [ -z "$IP" ]; then
+      continue
+    fi
     # 将格式化的行写入到AdGuardHome.yaml文件中
     echo "    - domain: \"$line\"" >>AdGuardHome.yaml
     echo "      answer: $IP" >>AdGuardHome.yaml
