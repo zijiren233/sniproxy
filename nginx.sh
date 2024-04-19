@@ -9,7 +9,7 @@ fi
 
 ERROR_LOG="error_log off;"
 
-while getopts "46b:e:" arg; do
+while getopts "46b:e" arg; do
     case $arg in
     4)
         DNS_CONFIG=" ipv4=on ipv6=off"
@@ -51,7 +51,7 @@ events
 }
 
 stream {
-    log_format basic '[\$time_local] \$remote_addr -> \$ssl_preread_server_name | \$upstream_addr';
+    log_format basic '[\$time_local] \$remote_addr → \$ssl_preread_server_name | \$upstream_addr ↑ \$upstream_bytes_sent ↓ \$upstream_bytes_received \$upstream_connect_time';
     access_log /var/log/nginx/access.log basic;
 
     map \$ssl_preread_server_name \$filtered_sni_name {
@@ -70,7 +70,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 done <"domains.txt"
 
 cat <<EOF >>nginx.conf
-        default "127.255.255.255";
+        default "";
     }
 EOF
 
