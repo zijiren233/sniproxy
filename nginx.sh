@@ -7,7 +7,9 @@ if [ ! -f "domains.txt" ]; then
     exit 1
 fi
 
-while getopts "46b:" arg; do
+ERROR_LOG="error_log off;"
+
+while getopts "46b:e:" arg; do
     case $arg in
     4)
         DNS_CONFIG=" ipv4=on ipv6=off"
@@ -20,6 +22,9 @@ while getopts "46b:" arg; do
     b)
         DNS_CONFIG=""
         BIND="proxy_bind $OPTARG;"
+        ;;
+    e)
+        ERROR_LOG="error_log /var/log/nginx/error.log notice;"
         ;;
     ?)
         echo "unkonw argument: $arg"
@@ -35,7 +40,7 @@ cat <<EOF >>nginx.conf
 user nginx;
 worker_processes auto;
 pid /var/run/nginx.pid;
-error_log /var/log/nginx/error.log notice;
+$ERROR_LOG
 worker_rlimit_nofile 51200;
 
 events
@@ -46,6 +51,9 @@ events
 }
 
 stream {
+    log_format basic '[\$time_local] \$remote_addr -> \$ssl_preread_server_name | \$upstream_addr';
+    access_log /var/log/nginx/access.log basic;
+
     map \$ssl_preread_server_name \$filtered_sni_name {
 EOF
 
@@ -86,6 +94,8 @@ http {
     tcp_nopush on;
     tcp_nodelay on;
     server_tokens off;
+    access_log off;
+    error_log off;
 
     server {
         listen 80 default_server;
