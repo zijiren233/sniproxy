@@ -29,7 +29,7 @@ stream {
 EOF
 
 # 打开文件并读取每一行
-while IFS= read -r line; do
+while IFS= read -r line || [[ -n "$line" ]]; do
     if [ -z "$line" ]; then
         continue
     fi
