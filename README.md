@@ -164,6 +164,15 @@ EOF
 
 ```bash
 bash run.sh
+
+# 如果只使用ipv4请求代理域名
+# bash run.sh -4
+
+# 如果只使用ipv6请求代理域名
+# bash run.sh -6
+
+# 如果使用绑定ip请求代理域名
+# bash run.sh -b <ip>
 ```
 
 运行后，nginx会监听80和443端口，AdGuardHome会监听53和8080端口，其中53端口为dns端口，8080端口为web管理端口。

@@ -3,7 +3,7 @@
 set -e
 
 bash ./adguardhome.sh
-bash ./nginx.sh
+bash ./nginx.sh $@
 
 if ! command -v docker-compose &>/dev/null; then
     if ! command -v docker &>/dev/null; then

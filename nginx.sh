@@ -7,6 +7,27 @@ if [ ! -f "domains.txt" ]; then
     exit 1
 fi
 
+while getopts "46b:" arg; do
+    case $arg in
+    4)
+        DNS_CONFIG=" ipv4=on ipv6=off"
+        BIND=""
+        ;;
+    6)
+        DNS_CONFIG=" ipv4=off ipv6=on"
+        BIND=""
+        ;;
+    b)
+        DNS_CONFIG=""
+        BIND="proxy_bind $OPTARG;"
+        ;;
+    ?)
+        echo "unkonw argument: $arg"
+        return 1
+        ;;
+    esac
+done
+
 # 清空
 >nginx.conf
 
@@ -43,16 +64,21 @@ done <"domains.txt"
 cat <<EOF >>nginx.conf
         default "127.255.255.255";
     }
+EOF
 
-    resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=off;
+cat <<EOF >>nginx.conf
+    resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]$DNS_CONFIG;
+    resolver_timeout 5s;
+EOF
 
+cat <<EOF >>nginx.conf
     server {
         listen 443;
         listen [::]:443;
         ssl_preread on;
 
         proxy_pass \$filtered_sni_name:443;
-        # proxy_bind <ip>;
+        $BIND
     }
 }
 
