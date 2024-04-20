@@ -5,9 +5,16 @@ set -e
 bash ./adguardhome.sh
 bash ./nginx.sh $@
 
-getopts "46b:" opt
-shift $((OPTIND - 1))
-MORE_ARGS="$@"
+# 如果参数中有除 46b:e 之外的参数，则传递给 docker-compose
+if [ $# -gt 0 ]; then
+    while getopts "46b:e" arg; do
+        case $arg in
+        ?) ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+    MORE_ARGS="$@"
+fi
 
 if ! command -v docker-compose &>/dev/null; then
     if ! command -v docker &>/dev/null; then

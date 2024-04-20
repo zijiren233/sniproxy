@@ -157,12 +157,19 @@ EOF
 
 # 打开文件并读取每一行
 while IFS= read -r line || [[ -n "$line" ]]; do
+  # 跳过空行
   if [ -z "$line" ]; then
     continue
   fi
+  # 跳过注释行
   if [[ $line == //* ]]; then
     continue
   fi
+  # 跳过nginx规则
+  if [[ $line == \!* ]]; then
+    continue
+  fi
+  # 如果是adguardhome规则，则获取IP列表
   if [[ $line == \#* ]]; then
     IPS=${line#*#}
     IPS=$(echo $IPS | xargs)
