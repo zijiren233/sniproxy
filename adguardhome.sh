@@ -66,7 +66,7 @@ dns:
   cache_optimistic: false
   bogus_nxdomain: []
   aaaa_disabled: false
-  enable_dnssec: false
+  enable_dnssec: true
   edns_client_subnet:
     custom_ip: ""
     enabled: true
