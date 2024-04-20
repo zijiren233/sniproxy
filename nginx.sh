@@ -59,6 +59,9 @@ EOF
 
 # 打开文件并读取每一行
 while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ $line == //* ]]; then
+        continue
+    fi
     if [ -z "$line" ]; then
         continue
     fi

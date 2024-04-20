@@ -160,6 +160,9 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   if [ -z "$line" ]; then
     continue
   fi
+  if [[ $line == //* ]]; then
+    continue
+  fi
   if [[ $line == \#* ]]; then
     IPS=${line#*#}
     IPS=$(echo $IPS | xargs)
