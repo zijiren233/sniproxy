@@ -39,7 +39,6 @@ dns:
   refuse_any: true
   upstream_dns:
     - h3://dns.google/dns-query
-    - quic://unfiltered.adguard-dns.com
   upstream_dns_file: ""
   bootstrap_dns:
     - 9.9.9.10
@@ -48,7 +47,6 @@ dns:
     - 2620:fe::fe:10
   fallback_dns:
     - https://dns.google/dns-query
-    - https://unfiltered.adguard-dns.com/dns-query
   upstream_mode: parallel
   fastest_timeout: 1s
   allowed_clients: []
