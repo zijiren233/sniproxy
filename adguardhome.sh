@@ -39,6 +39,7 @@ dns:
   refuse_any: true
   upstream_dns:
     - h3://dns.google/dns-query
+    - h3://e0dd780lvb.cloudflare-gateway.com/dns-query
   upstream_dns_file: ""
   bootstrap_dns:
     - 9.9.9.10
@@ -47,6 +48,7 @@ dns:
     - 2620:fe::fe:10
   fallback_dns:
     - https://dns.google/dns-query
+    - https://dns11.quad9.net/dns-query
   upstream_mode: parallel
   fastest_timeout: 1s
   allowed_clients: []
