@@ -71,7 +71,7 @@ dns:
     custom_ip: ""
     enabled: true
     use_custom: false
-  max_goroutines: 300
+  max_goroutines: 1024
   handle_ddr: true
   ipset: []
   ipset_file: ""
@@ -105,7 +105,7 @@ querylog:
   dir_path: ""
   ignored: []
   interval: 1h
-  size_memory: 32
+  size_memory: 2048
   enabled: true
   file_enabled: false
 statistics:
