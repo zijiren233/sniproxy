@@ -87,6 +87,12 @@ bash run.sh -b <ip>
 # 如果你修改了domains.txt文件，需要重新启动服务
 # 也需要指定 -4 -6 -b 等参数，如 bash run.sh -4
 bash run.sh
+
+# 如果只想启动sniproxy服务，不想启动AdGuardHome服务
+bash run.sh nginx
+
+# 如果只想启动AdGuardHome服务，不想启动sniproxy服务
+bash run.sh adguardhome
 ```
 
 运行后，nginx会监听80和443端口，AdGuardHome会监听53和8080端口，其中53端口为dns端口，8080端口为web管理端口。

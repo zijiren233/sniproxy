@@ -3,7 +3,7 @@ version: "3"
 services:
   adguardhome:
     image: adguard/adguardhome
-    container_name: adguardhome
+    container_name: sniproxy-adguardhome
     restart: unless-stopped
     logging:
       options:
@@ -14,7 +14,7 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: nginx
+    container_name: sniproxy-nginx
     restart: unless-stopped
     logging:
       options:
