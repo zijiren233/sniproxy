@@ -10,9 +10,13 @@ if ! command -v docker-compose &>/dev/null; then
         echo "docker not found"
         exit 1
     fi
+    docker compose pull
+    docker compose down
     docker compose up -d
     docker compose logs -f
 else
+    docker compose pull
+    docker-compose down
     docker-compose up -d
     docker-compose logs -f
 fi
