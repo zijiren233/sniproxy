@@ -49,7 +49,7 @@ events
 }
 
 stream {
-    log_format basic '[\$time_local] \$remote_addr → \$ssl_preread_server_name | \$upstream_addr ↑ \$upstream_bytes_sent ↓ \$upstream_bytes_received \$upstream_connect_time';
+    log_format basic '[\$time_local] \$proxy_protocol_addr → \$ssl_preread_server_name | \$upstream_addr ↑ \$upstream_bytes_sent ↓ \$upstream_bytes_received \$upstream_connect_time';
     access_log /var/log/nginx/access.log basic;
 
     map \$ssl_preread_server_name \$filtered_sni_name {
@@ -73,6 +73,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     # 如果是!开头，则设置使用的IP版本
     if [[ $line == \!* ]]; then
         IP_VERSION=${line#!}
+        continue
     fi
 
     case $IP_VERSION in
@@ -83,10 +84,10 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         echo "        ~^(.*\.)?${line//./\\.}\$ unix:/var/run/ipv6.sock;" >>nginx.conf
         ;;
     "")
-        echo "        ~^(.*\.)?${line//./\\.}\$ \$ssl_preread_server_name:443;" >>nginx.conf
+        echo "        ~^(.*\.)?${line//./\\.}\$ unix:/var/run/default.sock;" >>nginx.conf
         ;;
     *)
-        echo "unknown IP version: $IP_VERSIO, only 4 or 6 are supported"
+        echo "unknown IP version: $IP_VERSIO, only ipv4 or ipv6 are supported"
         exit 1
         ;;
     esac
@@ -106,9 +107,18 @@ cat <<EOF >>nginx.conf
         listen 443;
         listen [::]:443;
         ssl_preread on;
-        resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]$DNS_CONFIG;
+
+        access_log off;
 
         proxy_pass \$filtered_sni_name;
+        proxy_protocol on;
+    }
+    server {
+        listen unix:/var/run/default.sock proxy_protocol;
+        ssl_preread on;
+        resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]$DNS_CONFIG;
+
+        proxy_pass \$ssl_preread_server_name:443;
         $BIND
 
         proxy_buffer_size 24k;
@@ -116,18 +126,26 @@ cat <<EOF >>nginx.conf
         proxy_timeout 90s;
     }
     server {
-        listen unix:/var/run/ipv4.sock;
+        listen unix:/var/run/ipv4.sock proxy_protocol;
         ssl_preread on;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=on ipv6=off;
 
         proxy_pass \$ssl_preread_server_name:443;
+
+        proxy_buffer_size 24k;
+        proxy_connect_timeout 30s;
+        proxy_timeout 90s;
     }
     server {
-        listen unix:/var/run/ipv6.sock;
+        listen unix:/var/run/ipv6.sock proxy_protocol;
         ssl_preread on;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=off ipv6=on;
 
         proxy_pass \$ssl_preread_server_name:443;
+
+        proxy_buffer_size 24k;
+        proxy_connect_timeout 30s;
+        proxy_timeout 90s;
     }
 }
 
