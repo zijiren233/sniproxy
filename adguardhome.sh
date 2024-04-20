@@ -104,14 +104,14 @@ tls:
 querylog:
   dir_path: ""
   ignored: []
-  interval: 6h
-  size_memory: 1000
+  interval: 1h
+  size_memory: 32
   enabled: true
-  file_enabled: true
+  file_enabled: false
 statistics:
   dir_path: ""
   ignored: []
-  interval: 6h
+  interval: 3h
   enabled: true
 filters: []
 whitelist_filters: []
