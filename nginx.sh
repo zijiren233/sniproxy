@@ -49,8 +49,11 @@ events
 }
 
 stream {
-    log_format basic '[\$time_local] \$proxy_protocol_addr → \$ssl_preread_server_name | \$upstream_addr ↑ \$upstream_bytes_sent ↓ \$upstream_bytes_received \$upstream_connect_time';
-    access_log /var/log/nginx/access.log basic;
+    log_format basic '[\$time_local] \$proxy_protocol_addr → \$ssl_preread_server_name | \$upstream_addr | ↑ \$upstream_bytes_sent | ↓ \$upstream_bytes_received | \$upstream_connect_time s | \$status';
+    map \$status \$loggable {
+        default 1;
+    }
+    access_log /var/log/nginx/access.log basic if=\$loggable;
 
     map \$ssl_preread_server_name \$filtered_sni_name {
 EOF
@@ -104,8 +107,8 @@ EOF
 
 cat <<EOF >>nginx.conf
     server {
-        listen 443;
-        listen [::]:443;
+        listen 443 reuseport;
+        listen [::]:443 reuseport;
         ssl_preread on;
 
         access_log off;
@@ -157,8 +160,8 @@ http {
     error_log off;
 
     server {
-        listen 80 default_server;
-        listen [::]:80 default_server;
+        listen 80 default_server reuseport;
+        listen [::]:80 default_server reuseport;
 
         server_name _;
 
