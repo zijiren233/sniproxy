@@ -56,6 +56,7 @@ stream {
     access_log /var/log/nginx/access.log basic if=\$loggable;
 
     map \$ssl_preread_server_name \$filtered_sni_name {
+        hostnames;
 EOF
 
 # 打开文件并读取每一行
@@ -81,13 +82,13 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 
     case $IP_VERSION in
     "ipv4")
-        echo "        ~^(.*\.)?${line//./\\.}\$ unix:/var/run/ipv4.sock;" >>nginx.conf
+        echo "        .$line unix:/var/run/ipv4.sock;" >>nginx.conf
         ;;
     "ipv6")
-        echo "        ~^(.*\.)?${line//./\\.}\$ unix:/var/run/ipv6.sock;" >>nginx.conf
+        echo "        .$line unix:/var/run/ipv6.sock;" >>nginx.conf
         ;;
     "")
-        echo "        ~^(.*\.)?${line//./\\.}\$ unix:/var/run/default.sock;" >>nginx.conf
+        echo "        .$line unix:/var/run/default.sock;" >>nginx.conf
         ;;
     *)
         echo "unknown IP version: $IP_VERSIO, only ipv4 or ipv6 are supported"
