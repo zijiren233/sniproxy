@@ -105,6 +105,10 @@ bash run.sh nginx
 bash run.sh adguardhome
 ```
 
-运行后，nginx会监听80和443端口，AdGuardHome会监听53和8080端口，其中53端口为dns端口，8080端口为web管理端口。
+运行后，nginx会监听80和443端口，AdGuardHome会监听53和8080端口，其中53端口为dns端口，`8080` 端口为web管理端口。
 
 把服务器的dns设置为AdGuardHome的IP地址，这样就可以实现通过AdGuardHome的DNS重写来解锁Netflix、Disney和TikTok。
+
+其中，AdGuardHome的 `8080` 端口还可以当作 `doh(dns over http)` ，注意并不是 `dns over https`
+
+如果要启用 `doh(dns over https)` 建议使用反向代理或cloudflare的cdn
