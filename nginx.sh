@@ -49,11 +49,12 @@ events
 }
 
 stream {
-    log_format basic '[\$time_local] \$proxy_protocol_addr → \$ssl_preread_server_name | \$upstream_addr | ↑ \$upstream_bytes_sent | ↓ \$upstream_bytes_received | \$upstream_connect_time s | \$status';
+    log_format basic '[\$time_local] \$proxy_protocol_addr:\$proxy_protocol_port → \$ssl_preread_server_name | \$upstream_addr | ↑ \$upstream_bytes_sent | ↓ \$upstream_bytes_received | \$session_time s | \$status';
     map \$status \$loggable {
         default 1;
     }
     access_log /var/log/nginx/access.log basic if=\$loggable;
+    tcp_nodelay on;
 
     map \$ssl_preread_server_name \$filtered_sni_name {
         hostnames;
@@ -107,6 +108,10 @@ cat <<EOF >>nginx.conf
 EOF
 
 cat <<EOF >>nginx.conf
+    proxy_connect_timeout 10s;
+    proxy_timeout 90s;
+    preread_timeout 10s;
+    proxy_buffer_size 24k;
     server {
         listen 443 reuseport;
         listen [::]:443 reuseport;
@@ -124,10 +129,6 @@ cat <<EOF >>nginx.conf
 
         proxy_pass \$ssl_preread_server_name:443;
         $BIND
-
-        proxy_buffer_size 24k;
-        proxy_connect_timeout 30s;
-        proxy_timeout 90s;
     }
     server {
         listen unix:/var/run/ipv4.sock proxy_protocol;
@@ -135,10 +136,6 @@ cat <<EOF >>nginx.conf
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=on ipv6=off;
 
         proxy_pass \$ssl_preread_server_name:443;
-
-        proxy_buffer_size 24k;
-        proxy_connect_timeout 30s;
-        proxy_timeout 90s;
     }
     server {
         listen unix:/var/run/ipv6.sock proxy_protocol;
@@ -146,10 +143,6 @@ cat <<EOF >>nginx.conf
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=off ipv6=on;
 
         proxy_pass \$ssl_preread_server_name:443;
-
-        proxy_buffer_size 24k;
-        proxy_connect_timeout 30s;
-        proxy_timeout 90s;
     }
 }
 
@@ -165,6 +158,8 @@ http {
         listen [::]:80 default_server reuseport;
 
         server_name _;
+
+        proxy_buffers off;
 
         return 302 https://\$http_host\$request_uri;
     }

@@ -34,7 +34,7 @@ adguardhome)
         ($DOCKER_COMPOSE down adguardhome && $DOCKER_COMPOSE up adguardhome -d)
     ;;
 nginx)
-    $DOCKER_COMPOSE exec nginx nginx -s reload ||
+    ($DOCKER_COMPOSE exec nginx nginx -t && $DOCKER_COMPOSE exec nginx nginx -s reload) ||
         ($DOCKER_COMPOSE exec nginx nginx true && $DOCKER_COMPOSE restart nginx) ||
         ($DOCKER_COMPOSE down nginx && $DOCKER_COMPOSE up nginx -d)
     ;;
@@ -42,7 +42,7 @@ nginx)
     $DOCKER_COMPOSE exec adguardhome /opt/adguardhome/AdGuardHome -s reload ||
         ($DOCKER_COMPOSE exec adguardhome true && $DOCKER_COMPOSE restart adguardhome) ||
         ($DOCKER_COMPOSE down adguardhome && $DOCKER_COMPOSE up adguardhome -d)
-    $DOCKER_COMPOSE exec nginx nginx -s reload ||
+    ($DOCKER_COMPOSE exec nginx nginx -t && $DOCKER_COMPOSE exec nginx nginx -s reload) ||
         ($DOCKER_COMPOSE exec nginx nginx true && $DOCKER_COMPOSE restart nginx) ||
         ($DOCKER_COMPOSE down nginx && $DOCKER_COMPOSE up nginx -d)
     ;;
