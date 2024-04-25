@@ -55,9 +55,10 @@ function IsIPv6() {
 
 # 打开文件并读取每一行
 while IFS= read -r line || [[ -n "$line" ]]; do
-    # 如果是空行则清空IP版本
+    # 如果是空行则清空IP版本和速率限制
     if [ -z "$line" ]; then
         IP_VERSION=""
+        RATE=""
         continue
     fi
     # 如果是注释行则跳过
@@ -70,8 +71,20 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     fi
     # 如果是!开头，则设置使用的IP版本
     if [[ $line == \!* ]]; then
-        IP_VERSION=${line#!}
+        IP_VERSION="${line#!}"
         continue
+    fi
+    # 如果是<开头则设置速录限制
+    if [[ $line == \<* ]]; then
+        RATE="${line#<}"
+        continue
+    fi
+
+    DOMAIN=".${line}"
+
+    # 如果速录限制不为空，则添加到RATES变量中
+    if [ "$RATE" != "" ]; then
+        RATES=$(echo -e "$RATES\n        $DOMAIN $RATE;")
     fi
 
     case $IP_VERSION in
@@ -79,32 +92,32 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         if [ "$HOSTS_IPv4" == "" ]; then
             HOSTS_IPv4=""
         fi
-        HOSTS_IPv4="$HOSTS_IPv4 .$line"
+        HOSTS_IPv4="$HOSTS_IPv4 $DOMAIN"
         ;;
     "ipv6")
         if [ "$HOSTS_IPv6" == "" ]; then
             HOSTS_IPv6=""
         fi
-        HOSTS_IPv6="$HOSTS_IPv6 .$line"
+        HOSTS_IPv6="$HOSTS_IPv6 $DOMAIN"
         ;;
     "")
         if [ "$HOSTS_DEFAULT" == "" ]; then
             HOSTS_DEFAULT=""
         fi
-        HOSTS_DEFAULT="$HOSTS_DEFAULT .$line"
+        HOSTS_DEFAULT="$HOSTS_DEFAULT $DOMAIN"
         ;;
     *)
-        BINDS=$(echo -e "$BINDS\n        .$line $IP_VERSION;")
+        BINDS=$(echo -e "$BINDS\n        $DOMAIN $IP_VERSION;")
         if [ $(IsIPv4 $IP_VERSION) -eq 0 ]; then
             if [ "$HOSTS_IPv4_BIND" == "" ]; then
                 HOSTS_IPv4_BIND=""
             fi
-            HOSTS_IPv4_BIND="$HOSTS_IPv4_BIND .$line"
+            HOSTS_IPv4_BIND="$HOSTS_IPv4_BIND $DOMAIN"
         elif [ $(IsIPv6 $IP_VERSION) -eq 0 ]; then
             if [ "$HOSTS_IPv6_BIND" == "" ]; then
                 HOSTS_IPv6_BIND=""
             fi
-            HOSTS_IPv6_BIND="$HOSTS_IPv6_BIND .$line"
+            HOSTS_IPv6_BIND="$HOSTS_IPv6_BIND $DOMAIN"
         else
             echo "unknown IP version: $IP_VERSION, only ipv4 or ipv6 are supported"
             exit 1
@@ -195,6 +208,10 @@ stream {
         hostnames;$BINDS
         default 0;
     }
+    map \$hostname \$rate {
+        hostnames;$RATES
+        default 0;
+    }
     proxy_connect_timeout 5s;
     proxy_timeout 60s;
     # proxy_buffer_size 32k;
@@ -204,6 +221,8 @@ stream {
     resolver_timeout 3s;
     proxy_socket_keepalive on;
     proxy_half_close on;
+    proxy_upload_rate \$rate;
+    proxy_download_rate \$rate;
     $DEFAULT_SERVER
     $IPv4_SERVER
     $IPv4_BIND_SERVER

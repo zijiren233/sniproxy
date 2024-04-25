@@ -169,6 +169,10 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   if [[ $line == \!* ]]; then
     continue
   fi
+  # 跳过nginx规则
+  if [[ $line == \<* ]]; then
+    continue
+  fi
   # 如果是adguardhome规则，则获取IP列表
   if [[ $line == \#* ]]; then
     IPS=${line#*#}

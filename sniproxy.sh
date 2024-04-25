@@ -60,6 +60,9 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     if [[ $line == \!* ]]; then
         continue
     fi
+    if [[ $line == \<* ]]; then
+        continue
+    fi
     echo "    .*${line//./\\.}\$ *" >>sniproxy.conf
 done <"domains.txt"
 
