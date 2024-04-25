@@ -195,27 +195,29 @@ stream {
         hostnames;$BINDS
         default 0;
     }
-    proxy_connect_timeout 10s;
-    proxy_timeout 90s;
-    proxy_buffer_size 24k;
+    proxy_connect_timeout 5s;
+    proxy_timeout 60s;
+    # proxy_buffer_size 32k;
     tcp_nodelay on;
     ssl_preread on;
     preread_timeout 5s;
-    resolver_timeout 5s;
+    resolver_timeout 3s;
+    proxy_socket_keepalive on;
+    proxy_half_close on;
     $DEFAULT_SERVER
     $IPv4_SERVER
     $IPv4_BIND_SERVER
     $IPv6_SERVER
     $IPv6_BIND_SERVER
     server {
-        listen 443 reuseport;
-        listen [::]:443 reuseport;
+        listen 443 reuseport so_keepalive=30s::1;
+        listen [::]:443 reuseport so_keepalive=30s::1;
         server_name ~^.*$;
 
         access_log off;
 
         deny all;
-        proxy_pass \$ssl_preread_server_name:443;
+        return 0;
     }
 }
 
