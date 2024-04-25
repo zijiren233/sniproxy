@@ -113,69 +113,62 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     esac
 done <"domains.txt"
 
-REUSEPORT=" reuseport"
-
 if [ "$HOSTS_DEFAULT" != "" ]; then
     DEFAULT_SERVER="server {
-        listen 443$REUSEPORT;
-        listen [::]:443$REUSEPORT;
+        listen 443;
+        listen [::]:443;
         server_name$HOSTS_DEFAULT;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]$DNS_CONFIG;
 
         proxy_pass \$ssl_preread_server_name:443;
         $BIND
     }"
-    REUSEPORT=""
 fi
 
 if [ "$HOSTS_IPv4" != "" ]; then
     IPv4_SERVER="server {
-        listen 443$REUSEPORT;
-        listen [::]:443$REUSEPORT;
+        listen 443;
+        listen [::]:443;
         server_name$HOSTS_IPv4;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=on ipv6=off;
 
         proxy_pass \$ssl_preread_server_name:443;
     }"
-    REUSEPORT=""
 fi
 
 if [ "$HOSTS_IPv4_BIND" != "" ]; then
     IPv4_BIND_SERVER="server {
-        listen 443$REUSEPORT;
-        listen [::]:443$REUSEPORT;
+        listen 443;
+        listen [::]:443;
         server_name$HOSTS_IPv4_BIND;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=on ipv6=off;
 
         proxy_pass \$ssl_preread_server_name:443;
         proxy_bind \$bind;
     }"
-    REUSEPORT=""
 fi
 
 if [ "$HOSTS_IPv6" != "" ]; then
     IPv6_SERVER="server {
-        listen 443$REUSEPORT;
-        listen [::]:443$REUSEPORT;
+        listen 443;
+        listen [::]:443;
         server_name$HOSTS_IPv6;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=off ipv6=on;
 
         proxy_pass \$ssl_preread_server_name:443;
     }"
-    REUSEPORT=""
 fi
 
 if [ "$HOSTS_IPv6_BIND" != "" ]; then
     IPv6_BIND_SERVER="server {
-        listen 443$REUSEPORT;
-        listen [::]:443$REUSEPORT;
+        listen 443;
+        listen [::]:443;
         server_name$HOSTS_IPv6_BIND;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=off ipv6=on;
 
         proxy_pass \$ssl_preread_server_name:443;
         proxy_bind \$bind;
     }"
-    REUSEPORT=""
 fi
 
 cat <<EOF >nginx.conf
@@ -215,8 +208,8 @@ stream {
     $IPv6_SERVER
     $IPv6_BIND_SERVER
     server {
-        listen 443$REUSEPORT;
-        listen [::]:443$REUSEPORT;
+        listen 443 reuseport;
+        listen [::]:443 reuseport;
         server_name ~^.*$;
 
         access_log off;
