@@ -13,7 +13,7 @@ services:
       - ./conf:/opt/adguardhome/conf
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.26-alpine
     container_name: sniproxy-nginx
     restart: unless-stopped
     logging:
