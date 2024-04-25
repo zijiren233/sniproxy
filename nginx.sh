@@ -121,7 +121,6 @@ if [ "$HOSTS_DEFAULT" != "" ]; then
         listen [::]:443$REUSEPORT;
         server_name$HOSTS_DEFAULT;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]$DNS_CONFIG;
-        resolver_timeout 5s;
 
         proxy_pass \$ssl_preread_server_name:443;
         $BIND
@@ -135,7 +134,6 @@ if [ "$HOSTS_IPv4" != "" ]; then
         listen [::]:443$REUSEPORT;
         server_name$HOSTS_IPv4;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=on ipv6=off;
-        resolver_timeout 5s;
 
         proxy_pass \$ssl_preread_server_name:443;
     }"
@@ -148,7 +146,6 @@ if [ "$HOSTS_IPv4_BIND" != "" ]; then
         listen [::]:443$REUSEPORT;
         server_name$HOSTS_IPv4_BIND;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=on ipv6=off;
-        resolver_timeout 5s;
 
         proxy_pass \$ssl_preread_server_name:443;
         proxy_bind \$bind;
@@ -162,7 +159,6 @@ if [ "$HOSTS_IPv6" != "" ]; then
         listen [::]:443$REUSEPORT;
         server_name$HOSTS_IPv6;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=off ipv6=on;
-        resolver_timeout 5s;
 
         proxy_pass \$ssl_preread_server_name:443;
     }"
@@ -175,7 +171,6 @@ if [ "$HOSTS_IPv6_BIND" != "" ]; then
         listen [::]:443$REUSEPORT;
         server_name$HOSTS_IPv6_BIND;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=off ipv6=on;
-        resolver_timeout 5s;
 
         proxy_pass \$ssl_preread_server_name:443;
         proxy_bind \$bind;
@@ -213,6 +208,7 @@ stream {
     tcp_nodelay on;
     ssl_preread on;
     preread_timeout 5s;
+    resolver_timeout 5s;
     $DEFAULT_SERVER
     $IPv4_SERVER
     $IPv4_BIND_SERVER
