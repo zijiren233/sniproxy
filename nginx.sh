@@ -39,17 +39,17 @@ done
 function IsIPv4() {
     local IP=$1
     if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        return 0
+        echo "0"
     else
-        return 1
+        echo "1"
     fi
 }
 
 function IsIPv6() {
     if [[ "$1" =~ ^[0-9a-fA-F:]+$ ]]; then
-        return 0
+        echo "0"
     else
-        return 1
+        echo "1"
     fi
 }
 
@@ -95,12 +95,12 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         ;;
     *)
         BINDS=$(echo -e "$BINDS\n        .$line $IP_VERSION;")
-        if [ -z $(IsIPv4 $IP_VERSION)]; then
+        if [ $(IsIPv4 $IP_VERSION) -eq 0 ]; then
             if [ "$HOSTS_IPv4_BIND" == "" ]; then
                 HOSTS_IPv4_BIND=""
             fi
             HOSTS_IPv4_BIND="$HOSTS_IPv4_BIND .$line"
-        elif [ -z $(IsIPv6 $IP_VERSION)]; then
+        elif [ $(IsIPv6 $IP_VERSION) -eq 0 ]; then
             if [ "$HOSTS_IPv6_BIND" == "" ]; then
                 HOSTS_IPv6_BIND=""
             fi
