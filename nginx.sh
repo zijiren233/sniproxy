@@ -214,10 +214,10 @@ stream {
     }
     proxy_connect_timeout 5s;
     proxy_timeout 60s;
-    # proxy_buffer_size 32k;
+    proxy_buffer_size 24k;
     tcp_nodelay on;
     ssl_preread on;
-    preread_timeout 5s;
+    preread_timeout 3s;
     resolver_timeout 3s;
     proxy_socket_keepalive on;
     proxy_half_close on;
@@ -229,8 +229,8 @@ stream {
     $IPv6_SERVER
     $IPv6_BIND_SERVER
     server {
-        listen 443 reuseport so_keepalive=30s::1;
-        listen [::]:443 reuseport so_keepalive=30s::1;
+        listen 443 reuseport so_keepalive=30s:5s:2;
+        listen [::]:443 reuseport so_keepalive=30s:5s:2;
         server_name ~^.*$;
 
         access_log off;
