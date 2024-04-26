@@ -204,11 +204,11 @@ stream {
         default 1;
     }
     access_log /var/log/nginx/access.log basic if=\$loggable;
-    map \$hostname \$bind {
+    map \$ssl_preread_server_name \$bind {
         hostnames;$BINDS
         default 0;
     }
-    map \$hostname \$rate {
+    map \$ssl_preread_server_name \$rate {
         hostnames;$RATES
         default 0;
     }
