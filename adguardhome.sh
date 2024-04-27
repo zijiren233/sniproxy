@@ -85,7 +85,7 @@ dns:
   serve_http3: false
   use_http3_upstreams: false
   serve_plain_dns: true
-  hostsfile_enabled: true
+  hostsfile_enabled: false
 tls:
   enabled: false
   server_name: ""
@@ -105,7 +105,7 @@ querylog:
   dir_path: ""
   ignored: []
   interval: 1h
-  size_memory: 2048
+  size_memory: 4096
   enabled: true
   file_enabled: false
 statistics:
