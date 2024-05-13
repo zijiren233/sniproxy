@@ -63,7 +63,9 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     if [[ $line == \<* ]]; then
         continue
     fi
-    echo "    .*${line//./\\.}\$ *" >>sniproxy.conf
+    # 把line按照@分割，第一个为域名，不需要后面的，且需要trim
+    DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
+    echo "    .*${DOMAIN//./\\.}\$ *" >>sniproxy.conf
 done <"domains.txt"
 
 cat <<EOF >>sniproxy.conf

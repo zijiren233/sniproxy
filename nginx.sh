@@ -82,6 +82,18 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 
     DOMAIN=".${line}"
 
+    # 把DOMAIN按照@分割，第一个为域名，第二个为SOURCE，且需要trim
+    SOURCE=$(echo $DOMAIN | awk -F@ '{print $2}' | xargs)
+    DOMAIN=$(echo $DOMAIN | awk -F@ '{print $1}' | xargs)
+
+    if [ "$SOURCE" != "" ]; then
+        # 如果没有端口号，则默认443
+        if [[ $SOURCE != *:* ]]; then
+            SOURCE="$SOURCE:443"
+        fi
+        SOURCES=$(echo -e "$SOURCES\n        $DOMAIN $SOURCE;")
+    fi
+
     # 如果速录限制不为空，则添加到RATES变量中
     if [ "$RATE" != "" ]; then
         RATES=$(echo -e "$RATES\n        $DOMAIN $RATE;")
@@ -133,7 +145,7 @@ if [ "$HOSTS_DEFAULT" != "" ]; then
         server_name$HOSTS_DEFAULT;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]$DNS_CONFIG;
 
-        proxy_pass \$ssl_preread_server_name:443;
+        proxy_pass \$source;
         $BIND
     }"
 fi
@@ -145,7 +157,7 @@ if [ "$HOSTS_IPv4" != "" ]; then
         server_name$HOSTS_IPv4;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=on ipv6=off;
 
-        proxy_pass \$ssl_preread_server_name:443;
+        proxy_pass \$source;
     }"
 fi
 
@@ -156,7 +168,7 @@ if [ "$HOSTS_IPv4_BIND" != "" ]; then
         server_name$HOSTS_IPv4_BIND;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=on ipv6=off;
 
-        proxy_pass \$ssl_preread_server_name:443;
+        proxy_pass \$source;
         proxy_bind \$bind;
     }"
 fi
@@ -168,7 +180,7 @@ if [ "$HOSTS_IPv6" != "" ]; then
         server_name$HOSTS_IPv6;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=off ipv6=on;
 
-        proxy_pass \$ssl_preread_server_name:443;
+        proxy_pass \$source;
     }"
 fi
 
@@ -179,7 +191,7 @@ if [ "$HOSTS_IPv6_BIND" != "" ]; then
         server_name$HOSTS_IPv6_BIND;
         resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=off ipv6=on;
 
-        proxy_pass \$ssl_preread_server_name:443;
+        proxy_pass \$source;
         proxy_bind \$bind;
     }"
 fi
@@ -204,6 +216,10 @@ stream {
         default 1;
     }
     access_log /var/log/nginx/access.log basic if=\$loggable;
+    map \$ssl_preread_server_name \$source {
+        hostnames;$SOURCES
+        default \$ssl_preread_server_name:443;
+    }
     map \$ssl_preread_server_name \$bind {
         hostnames;$BINDS
         default 0;

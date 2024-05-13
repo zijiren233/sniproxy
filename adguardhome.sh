@@ -190,10 +190,12 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     if [ -z "$IP" ]; then
       continue
     fi
+    # 把line按照@分割，第一个为域名，不需要后面的，且需要trim
+    DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
     # 将格式化的行写入到AdGuardHome.yaml文件中
-    echo "    - domain: \"$line\"" >>AdGuardHome.yaml
+    echo "    - domain: \"$DOMAIN\"" >>AdGuardHome.yaml
     echo "      answer: $IP" >>AdGuardHome.yaml
-    echo "    - domain: \"*.$line\"" >>AdGuardHome.yaml
+    echo "    - domain: \"*.$DOMAIN\"" >>AdGuardHome.yaml
     echo "      answer: $IP" >>AdGuardHome.yaml
   done
 done <"domains.txt"
