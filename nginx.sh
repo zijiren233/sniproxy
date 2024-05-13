@@ -53,6 +53,35 @@ function IsIPv6() {
     fi
 }
 
+pools=()
+
+function AddPool() {
+    local e
+    for e in "${pools[@]}"; do
+        if [[ "$e" == "$1" ]]; then
+            return 0
+        fi
+    done
+    pools+=("$1")
+}
+
+# 把.替换成_,把:替换成-
+function NewPoolName() {
+    local POOL_NAME=${1//./_}
+    echo ${POOL_NAME//:/-}
+}
+
+function BuildPools() {
+    for key in "${pools[@]}"; do
+        cat <<EOF
+    upstream $(NewPoolName ${key}) {
+        server ${key};
+        keepalive 64;
+    }
+EOF
+    done
+}
+
 # 打开文件并读取每一行
 while IFS= read -r line || [[ -n "$line" ]]; do
     # 如果是空行则清空IP版本和速率限制
@@ -91,7 +120,8 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         if [[ $SOURCE != *:* ]]; then
             SOURCE="$SOURCE:443"
         fi
-        SOURCES=$(echo -e "$SOURCES\n        $DOMAIN $SOURCE;")
+        AddPool $SOURCE
+        SOURCES=$(echo -e "$SOURCES\n        $DOMAIN $(NewPoolName $SOURCE);")
     fi
 
     # 如果速录限制不为空，则添加到RATES变量中
@@ -216,6 +246,7 @@ stream {
         default 1;
     }
     access_log /var/log/nginx/access.log basic if=\$loggable;
+$(BuildPools)
     map \$ssl_preread_server_name \$source {
         hostnames;$SOURCES
         default \$ssl_preread_server_name:443;
