@@ -7,11 +7,54 @@ if [ ! -f "domains.txt" ]; then
   exit 1
 fi
 
-# 清空
->AdGuardHome.yaml
+function BuildRewrites() {
+  # 打开文件并读取每一行
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    # 跳过空行
+    if [ -z "$line" ]; then
+      continue
+    fi
+    # 跳过注释行
+    if [[ $line == //* ]]; then
+      continue
+    fi
+    # 跳过nginx规则
+    if [[ $line == \!* ]]; then
+      continue
+    fi
+    # 跳过nginx规则
+    if [[ $line == \<* ]]; then
+      continue
+    fi
+    # 如果是adguardhome规则，则获取IP列表
+    if [[ $line == \#* ]]; then
+      IPS=${line#*#}
+      IPS=$(echo $IPS | xargs)
+      continue
+    fi
+    if [ -z "$IPS" ]; then
+      echo "ip list empty"
+      exit 1
+    fi
+
+    for IP in $(echo $IPS | sed "s/,/ /g"); do
+      IP=$(echo $IP | xargs)
+      if [ -z "$IP" ]; then
+        continue
+      fi
+      # 把line按照@分割，第一个为域名，不需要后面的，且需要trim
+      DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
+      # 将格式化的行写入到AdGuardHome.yaml文件中
+      echo "    - domain: \"$DOMAIN\""
+      echo "      answer: $IP"
+      echo "    - domain: \"*.$DOMAIN\""
+      echo "      answer: $IP"
+    done
+  done <"domains.txt"
+}
 
 # 写入初始内容到AdGuardHome.yaml文件
-cat <<EOF >>AdGuardHome.yaml
+cat <<EOF >AdGuardHome.yaml
 http:
   pprof:
     port: 6060
@@ -49,7 +92,7 @@ dns:
   fallback_dns:
     - https://dns.google/dns-query
     - tls://dns11.quad9.net
-  upstream_mode: parallel
+  upstream_mode: load_balance
   fastest_timeout: 1s
   allowed_clients: []
   disallowed_clients: []
@@ -153,55 +196,7 @@ filtering:
   parental_block_host: family-block.dns.adguard.com
   safebrowsing_block_host: standard-block.dns.adguard.com
   rewrites:
-EOF
-
-# 打开文件并读取每一行
-while IFS= read -r line || [[ -n "$line" ]]; do
-  # 跳过空行
-  if [ -z "$line" ]; then
-    continue
-  fi
-  # 跳过注释行
-  if [[ $line == //* ]]; then
-    continue
-  fi
-  # 跳过nginx规则
-  if [[ $line == \!* ]]; then
-    continue
-  fi
-  # 跳过nginx规则
-  if [[ $line == \<* ]]; then
-    continue
-  fi
-  # 如果是adguardhome规则，则获取IP列表
-  if [[ $line == \#* ]]; then
-    IPS=${line#*#}
-    IPS=$(echo $IPS | xargs)
-    echo $IPS
-    continue
-  fi
-  if [ -z "$IPS" ]; then
-    echo "ip list empty"
-    exit 1
-  fi
-
-  for IP in $(echo $IPS | sed "s/,/ /g"); do
-    IP=$(echo $IP | xargs)
-    if [ -z "$IP" ]; then
-      continue
-    fi
-    # 把line按照@分割，第一个为域名，不需要后面的，且需要trim
-    DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
-    # 将格式化的行写入到AdGuardHome.yaml文件中
-    echo "    - domain: \"$DOMAIN\"" >>AdGuardHome.yaml
-    echo "      answer: $IP" >>AdGuardHome.yaml
-    echo "    - domain: \"*.$DOMAIN\"" >>AdGuardHome.yaml
-    echo "      answer: $IP" >>AdGuardHome.yaml
-  done
-done <"domains.txt"
-
-# 在文件末尾添加内容
-cat <<EOF >>AdGuardHome.yaml
+$(BuildRewrites)
   safebrowsing_cache_size: 1048576
   safesearch_cache_size: 1048576
   parental_cache_size: 1048576
