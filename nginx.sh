@@ -3,7 +3,7 @@
 set -e
 
 if [ ! -f "domains.txt" ]; then
-    echo "domains.txt not found"
+    echo "nginx: domains.txt not found"
     exit 1
 fi
 
@@ -13,6 +13,7 @@ HOSTS_IPv4=""
 HOSTS_IPv6=""
 HOSTS_IPv4_BIND=""
 HOSTS_IPv6_BIND=""
+ALLOW=""
 
 while getopts "46b:e" arg; do
     case $arg in
@@ -108,6 +109,25 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         RATE="${line#<}"
         continue
     fi
+    # 如果是&开头则设置允许的IP
+    if [[ $line == \&* ]]; then
+        # 去掉&并trim
+        IPS="${line#&}"
+        IPS=$(echo $IPS | xargs)
+        # 按照,分割IP并添加到ALLOW中
+        for IP in $(echo $IPS | sed "s/,/ /g"); do
+            IP=$(echo $IP | xargs)
+            if [ -z "$IP" ]; then
+                continue
+            fi
+            if [ "$ALLOW" == "" ]; then
+                ALLOW="allow $IP;"
+            else
+                ALLOW="$ALLOW\n    allow $IP;"
+            fi
+        done
+        continue
+    fi
 
     DOMAIN=".${line}"
 
@@ -161,12 +181,16 @@ while IFS= read -r line || [[ -n "$line" ]]; do
             fi
             HOSTS_IPv6_BIND="$HOSTS_IPv6_BIND $DOMAIN"
         else
-            echo "unknown IP version: $IP_VERSION, only ipv4 or ipv6 are supported"
+            echo "nginx: unknown IP version: $IP_VERSION, only ipv4 or ipv6 are supported"
             exit 1
         fi
         ;;
     esac
 done <"domains.txt"
+
+if [ -n "$ALLOW" ]; then
+    ALLOW=$(echo -e "$ALLOW\n    deny all;")
+fi
 
 if [ "$HOSTS_DEFAULT" != "" ]; then
     DEFAULT_SERVER="server {
@@ -231,12 +255,12 @@ user nginx;
 worker_processes auto;
 pid /var/run/nginx.pid;
 $ERROR_LOG
-worker_rlimit_nofile 51200;
+worker_rlimit_nofile 10240;
 
 events
 {
     use epoll;
-    worker_connections 51200;
+    worker_connections 10240;
     multi_accept on;
 }
 
@@ -246,6 +270,7 @@ stream {
         default 1;
     }
     access_log /var/log/nginx/access.log basic if=\$loggable;
+    $ALLOW
 $(BuildPools)
     map \$ssl_preread_server_name \$source {
         hostnames;$SOURCES
@@ -297,7 +322,6 @@ http {
     server {
         listen 80 default_server reuseport;
         listen [::]:80 default_server reuseport;
-
         server_name _;
 
         return 302 https://\$http_host\$request_uri;

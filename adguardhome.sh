@@ -3,7 +3,7 @@
 set -e
 
 if [ ! -f "domains.txt" ]; then
-  echo "domains.txt not found"
+  echo "adguardhome: domains.txt not found"
   exit 1
 fi
 
@@ -14,26 +14,30 @@ function BuildRewrites() {
     if [ -z "$line" ]; then
       continue
     fi
-    # 跳过注释行
+    # 跳过注释行 `//`
     if [[ $line == //* ]]; then
       continue
     fi
-    # 跳过nginx规则
+    # 跳过nginx规则 `!`
     if [[ $line == \!* ]]; then
       continue
     fi
-    # 跳过nginx规则
+    # 跳过nginx规则 `<`
     if [[ $line == \<* ]]; then
       continue
     fi
-    # 如果是adguardhome规则，则获取IP列表
+    # 跳过nginx规则 `&``
+    if [[ $line == \&* ]]; then
+      continue
+    fi
+    # 如果是adguardhome规则，则获取IP列表 `#`
     if [[ $line == \#* ]]; then
       IPS=${line#*#}
       IPS=$(echo $IPS | xargs)
       continue
     fi
     if [ -z "$IPS" ]; then
-      echo "ip list empty"
+      echo "adguardhome: ip list empty" 1>&2
       exit 1
     fi
 
