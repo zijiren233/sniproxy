@@ -58,12 +58,13 @@ pools=()
 
 function AddPool() {
     local e
+    local field="$2"
     for e in "${pools[@]}"; do
-        if [[ "$e" == "$1" ]]; then
+        if [[ "$e" == "$1@"* ]]; then
             return 0
         fi
     done
-    pools+=("$1")
+    pools+=("$1@$field")
 }
 
 # 把.替换成_,把:替换成-
@@ -74,13 +75,25 @@ function NewPoolName() {
 
 function BuildPools() {
     for key in "${pools[@]}"; do
-        cat <<EOF
-    upstream $(NewPoolName ${key}) {
-        server ${key};
-        keepalive 64;
-    }
-EOF
+        local server="${key%@*}"
+        local fields="${key#*@}"
+        echo "    upstream $(NewPoolName ${server}) {"
+        # 按照,分割field并循环
+        IFS=','
+        for server_addr in $fields; do
+            # trim空格
+            server_addr=$(echo "$server_addr" | xargs)
+            # 获取第一个空格之前的地址
+            local addr=$(echo "$server_addr" | awk '{print $1}')
+            # 如果地址没有端口号，则添加默认端口443
+            if [[ $addr != *:* ]]; then
+                server_addr="${addr}:443${server_addr#$addr}"
+            fi
+            echo "        server ${server_addr};"
+        done
+        echo "    }"
     done
+    unset IFS
 }
 
 # 打开文件并读取每一行
@@ -129,20 +142,16 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         continue
     fi
 
-    DOMAIN=".${line}"
-
     # 把DOMAIN按照@分割，第一个为域名，第二个为SOURCE，且需要trim
-    SOURCE=$(echo $DOMAIN | awk -F@ '{print $2}' | xargs)
-    DOMAIN=$(echo $DOMAIN | awk -F@ '{print $1}' | xargs)
+    DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
+    SOURCE=$(echo $line | awk -F@ '{print $2}' | xargs)
 
     if [ "$SOURCE" != "" ]; then
-        # 如果没有端口号，则默认443
-        if [[ $SOURCE != *:* ]]; then
-            SOURCE="$SOURCE:443"
-        fi
-        AddPool $SOURCE
-        SOURCES=$(echo -e "$SOURCES\n        $DOMAIN $(NewPoolName $SOURCE);")
+        AddPool "$DOMAIN" "$SOURCE"
+        SOURCES=$(echo -e "$SOURCES\n        .$DOMAIN $(NewPoolName $SOURCE);")
     fi
+
+    DOMAIN=".${DOMAIN}"
 
     # 如果速录限制不为空，则添加到RATES变量中
     if [ "$RATE" != "" ]; then
