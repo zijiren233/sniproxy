@@ -148,7 +148,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 
     if [ "$SOURCE" != "" ]; then
         AddPool "$DOMAIN" "$SOURCE"
-        SOURCES=$(echo -e "$SOURCES\n        .$DOMAIN $(NewPoolName $SOURCE);")
+        SOURCES=$(echo -e "$SOURCES\n        .$DOMAIN $(NewPoolName $DOMAIN);")
     fi
 
     DOMAIN=".${DOMAIN}"
