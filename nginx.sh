@@ -280,7 +280,9 @@ stream {
         default 1;
     }
     access_log /var/log/nginx/access.log basic if=\$loggable;
+
     $ALLOW
+
 $(BuildPools)
     map \$ssl_preread_server_name \$source {
         hostnames;$SOURCES
@@ -328,6 +330,8 @@ http {
     server_tokens off;
     access_log off;
     error_log off;
+
+    $ALLOW
 
     server {
         listen 80 default_server reuseport;
