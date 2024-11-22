@@ -264,12 +264,13 @@ user nginx;
 worker_processes auto;
 pid /var/run/nginx.pid;
 $ERROR_LOG
-worker_rlimit_nofile 10240;
+worker_rlimit_nofile 51200;
 
 events
 {
     use epoll;
-    worker_connections 10240;
+    # oom
+    # worker_connections 51200;
     multi_accept on;
 }
 
