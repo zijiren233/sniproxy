@@ -14,6 +14,9 @@ HOSTS_IPv6=""
 HOSTS_IPv4_BIND=""
 HOSTS_IPv6_BIND=""
 ALLOW=""
+EXTRA_STREAM_SERVERS=""
+DNS="1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]"
+DNS_CONFIG=""
 
 while getopts "46b:e" arg; do
     case $arg in
@@ -97,7 +100,9 @@ function BuildPools() {
 }
 
 # 打开文件并读取每一行
-while IFS= read -r line || [[ -n "$line" ]]; do
+while IFS= read -r line; do
+    # trim
+    line=$(echo "$line" | xargs)
     # 如果是空行则清空IP版本和速率限制
     if [ -z "$line" ]; then
         IP_VERSION=""
@@ -139,6 +144,41 @@ while IFS= read -r line || [[ -n "$line" ]]; do
                 ALLOW="$ALLOW\n    allow $IP;"
             fi
         done
+        continue
+    fi
+    # 解析 ``` 开头多行代码块
+    if [[ $line == "\`\`\`"* ]]; then
+        content=""
+        while IFS= read -r command_line; do
+            if [[ $(echo "$command_line" | xargs) == "\`\`\`" ]]; then
+                break
+            fi
+            if [ -n "$content" ]; then
+                content=$(echo -e "$content\n    $command_line")
+            else
+                content="$command_line"
+            fi
+        done
+        if [ -n "$content" ]; then
+            if [ -n "$EXTRA_STREAM_SERVERS" ]; then
+                EXTRA_STREAM_SERVERS=$(echo -e "$EXTRA_STREAM_SERVERS\n\n    $content")
+            else
+                EXTRA_STREAM_SERVERS="$content"
+            fi
+        fi
+        continue
+    fi
+    # 如果是单行注释块 ` 结尾
+    if [[ $line == *"\`" ]]; then
+        # 提取`和`之间的内容
+        content=$(echo "$line" | sed 's/\`\(.*\)\`/\1/' | xargs)
+        if [ -n "$content" ]; then
+            if [ -n "$EXTRA_STREAM_SERVERS" ]; then
+                EXTRA_STREAM_SERVERS=$(echo -e "$EXTRA_STREAM_SERVERS\n\n    $content")
+            else
+                EXTRA_STREAM_SERVERS="$content"
+            fi
+        fi
         continue
     fi
 
@@ -206,7 +246,7 @@ if [ "$HOSTS_DEFAULT" != "" ]; then
         listen 443;
         listen [::]:443;
         server_name$HOSTS_DEFAULT;
-        resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]$DNS_CONFIG;
+        ssl_preread on;
 
         proxy_pass \$source;
         $BIND
@@ -218,7 +258,8 @@ if [ "$HOSTS_IPv4" != "" ]; then
         listen 443;
         listen [::]:443;
         server_name$HOSTS_IPv4;
-        resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=on ipv6=off;
+        ssl_preread on;
+        resolver $DNS ipv4=on ipv6=off;
 
         proxy_pass \$source;
     }"
@@ -229,7 +270,8 @@ if [ "$HOSTS_IPv4_BIND" != "" ]; then
         listen 443;
         listen [::]:443;
         server_name$HOSTS_IPv4_BIND;
-        resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=on ipv6=off;
+        ssl_preread on;
+        resolver $DNS ipv4=on ipv6=off;
 
         proxy_pass \$source;
         proxy_bind \$bind;
@@ -241,7 +283,8 @@ if [ "$HOSTS_IPv6" != "" ]; then
         listen 443;
         listen [::]:443;
         server_name$HOSTS_IPv6;
-        resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=off ipv6=on;
+        ssl_preread on;
+        resolver $DNS ipv4=off ipv6=on;
 
         proxy_pass \$source;
     }"
@@ -252,7 +295,8 @@ if [ "$HOSTS_IPv6_BIND" != "" ]; then
         listen 443;
         listen [::]:443;
         server_name$HOSTS_IPv6_BIND;
-        resolver 1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888] ipv4=off ipv6=on;
+        ssl_preread on;
+        resolver $DNS ipv4=off ipv6=on;
 
         proxy_pass \$source;
         proxy_bind \$bind;
@@ -280,6 +324,7 @@ stream {
         default 1;
     }
     access_log /var/log/nginx/access.log basic if=\$loggable;
+    resolver $DNS$DNS_CONFIG;
 
     $ALLOW
 
@@ -300,7 +345,6 @@ $(BuildPools)
     proxy_timeout 60s;
     proxy_buffer_size 24k;
     tcp_nodelay on;
-    ssl_preread on;
     preread_timeout 3s;
     resolver_timeout 3s;
     proxy_socket_keepalive on;
@@ -316,12 +360,15 @@ $(BuildPools)
         listen 443 reuseport so_keepalive=30s:5s:2;
         listen [::]:443 reuseport so_keepalive=30s:5s:2;
         server_name ~^.*$;
+        ssl_preread on;
 
         access_log off;
 
         deny all;
         return 0;
     }
+
+    $EXTRA_STREAM_SERVERS
 }
 
 http {

@@ -3,58 +3,73 @@
 set -e
 
 if [ ! -f "domains.txt" ]; then
-  echo "adguardhome: domains.txt not found"
-  exit 1
+    echo "adguardhome: domains.txt not found"
+    exit 1
 fi
 
 function BuildRewrites() {
-  # 打开文件并读取每一行
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    # 跳过空行
-    if [ -z "$line" ]; then
-      continue
-    fi
-    # 跳过注释行 `//`
-    if [[ $line == //* ]]; then
-      continue
-    fi
-    # 跳过nginx规则 `!`
-    if [[ $line == \!* ]]; then
-      continue
-    fi
-    # 跳过nginx规则 `<`
-    if [[ $line == \<* ]]; then
-      continue
-    fi
-    # 跳过nginx规则 `&``
-    if [[ $line == \&* ]]; then
-      continue
-    fi
-    # 如果是adguardhome规则，则获取IP列表 `#`
-    if [[ $line == \#* ]]; then
-      IPS=${line#*#}
-      IPS=$(echo $IPS | xargs)
-      continue
-    fi
-    if [ -z "$IPS" ]; then
-      echo "adguardhome: ip list empty" 1>&2
-      exit 1
-    fi
+    # 打开文件并读取每一行
+    while IFS= read -r line; do
+        # trim
+        line=$(echo "$line" | xargs)
+        # 跳过空行
+        if [ -z "$line" ]; then
+            continue
+        fi
+        # 跳过注释行 `//`
+        if [[ $line == //* ]]; then
+            continue
+        fi
+        # 跳过nginx规则 `!`
+        if [[ $line == \!* ]]; then
+            continue
+        fi
+        # 跳过nginx规则 `<`
+        if [[ $line == \<* ]]; then
+            continue
+        fi
+        # 跳过nginx规则 `&`
+        if [[ $line == \&* ]]; then
+            continue
+        fi
+        # 跳过nginx多行注释块 ``` 开头
+        if [[ $line == "\`\`\`"* ]]; then
+            while IFS= read -r command_line; do
+                if [[ $(echo "$command_line" | xargs) == "\`\`\`" ]]; then
+                    break
+                fi
+            done
+            continue
+        fi
+        # 跳过nginx单行注释块 ` 结尾
+        if [[ $line == *"\`" ]]; then
+            continue
+        fi
+        # 如果是adguardhome规则，则获取IP列表 `#`
+        if [[ $line == \#* ]]; then
+            IPS=${line#*#}
+            IPS=$(echo $IPS | xargs)
+            continue
+        fi
+        if [ -z "$IPS" ]; then
+            echo "adguardhome: ip list empty" 1>&2
+            exit 1
+        fi
 
-    for IP in $(echo $IPS | sed "s/,/ /g"); do
-      IP=$(echo $IP | xargs)
-      if [ -z "$IP" ]; then
-        continue
-      fi
-      # 把line按照@分割，第一个为域名，不需要后面的，且需要trim
-      DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
-      # 将格式化的行写入到AdGuardHome.yaml文件中
-      echo "    - domain: \"$DOMAIN\""
-      echo "      answer: $IP"
-      echo "    - domain: \"*.$DOMAIN\""
-      echo "      answer: $IP"
-    done
-  done <"domains.txt"
+        for IP in $(echo $IPS | sed "s/,/ /g"); do
+            IP=$(echo $IP | xargs)
+            if [ -z "$IP" ]; then
+                continue
+            fi
+            # 把line按照@分割，第一个为域名，不需要后面的，且需要trim
+            DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
+            # 将格式化的行写入到AdGuardHome.yaml文件中
+            echo "    - domain: \"$DOMAIN\""
+            echo "      answer: $IP"
+            echo "    - domain: \"*.$DOMAIN\""
+            echo "      answer: $IP"
+        done
+    done <"domains.txt"
 }
 
 # 写入初始内容到AdGuardHome.yaml文件
