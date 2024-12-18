@@ -343,9 +343,9 @@ $(BuildPools)
     }
     proxy_connect_timeout 5s;
     proxy_timeout 60s;
-    proxy_buffer_size 24k;
+    proxy_buffer_size 32k;
     tcp_nodelay on;
-    preread_timeout 3s;
+    preread_timeout 5s;
     resolver_timeout 3s;
     proxy_socket_keepalive on;
     proxy_half_close on;
@@ -357,8 +357,8 @@ $(BuildPools)
     $IPv6_SERVER
     $IPv6_BIND_SERVER
     server {
-        listen 443 reuseport so_keepalive=30s:5s:2;
-        listen [::]:443 reuseport so_keepalive=30s:5s:2;
+        listen 443 reuseport so_keepalive=60s:20s:3;
+        listen [::]:443 reuseport so_keepalive=60s:20s:3;
         server_name ~^.*$;
         ssl_preread on;
 
