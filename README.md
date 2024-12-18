@@ -133,8 +133,8 @@ bash run.sh -b <ip>
 # 也需要指定 -4 -6 -b 等参数，如 bash run.sh -4
 bash run.sh
 
-# 如果只想启动sniproxy服务，不想启动AdGuardHome服务
-bash run.sh nginx
+# 如果只想启动sniproxy服务，使用指定dns，不想启动AdGuardHome服务
+bash run.sh -d 1.1.1.1 nginx
 
 # 如果只想启动AdGuardHome服务，不想启动sniproxy服务
 bash run.sh adguardhome

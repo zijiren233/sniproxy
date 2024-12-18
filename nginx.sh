@@ -18,7 +18,7 @@ EXTRA_STREAM_SERVERS=""
 DNS="1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]"
 DNS_CONFIG=""
 
-while getopts "46b:e" arg; do
+while getopts "46b:ed:" arg; do
     case $arg in
     4)
         DNS_CONFIG=" ipv4=on ipv6=off"
@@ -33,12 +33,19 @@ while getopts "46b:e" arg; do
     e)
         ERROR_LOG="error_log /var/log/nginx/error.log notice;"
         ;;
+    d)
+        DNS="$OPTARG"
+        ;;
     ?)
         echo "unkonw argument: $arg"
         return 1
         ;;
     esac
 done
+
+if [[ $DNS != *"valid="* ]]; then
+    DNS="$DNS valid=15s"
+fi
 
 function IsIPv4() {
     local IP=$1
