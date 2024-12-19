@@ -7,6 +7,10 @@ fi
 
 export CONFIG_DIR="/etc/nginx"
 
+if [ ! -f "$DOMAINS_FILE" ]; then
+    touch $DOMAINS_FILE
+fi
+
 bash /nginx.sh
 if [ $? -ne 0 ]; then
     echo "generate nginx.conf failed"

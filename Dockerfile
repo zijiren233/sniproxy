@@ -11,8 +11,7 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /app && \
-    touch /app/domains.txt
+RUN mkdir -p /app
 
 ENV DOMAINS_FILE="/app/domains.txt"
 
