@@ -16,8 +16,6 @@ RUN mkdir -p /app && \
 
 ENV DOMAINS_FILE="/app/domains.txt"
 
-ENV CONFIG_DIR="/etc/nginx"
-
 ENV DNS=""
 
 ENV LISTEN_PORTS="443"

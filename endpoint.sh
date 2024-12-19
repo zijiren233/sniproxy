@@ -5,13 +5,15 @@ if [ -z "$DOMAINS_FILE" ]; then
     exit 1
 fi
 
+export CONFIG_DIR="/etc/nginx"
+
 bash /nginx.sh
 if [ $? -ne 0 ]; then
     echo "generate nginx.conf failed"
     exit 1
 fi
 
-sh /docker-entrypoint.sh $@ &
+sh /docker-entrypoint.sh "$@" &
 
 while inotifywait -e modify $DOMAINS_FILE; do
     echo "$DOMAINS_FILE changed"
