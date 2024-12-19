@@ -1,5 +1,11 @@
 FROM nginx:1.26
 
+COPY nginx.sh /nginx.sh
+
+COPY endpoint.sh /endpoint.sh
+
+RUN chmod +x /nginx.sh /endpoint.sh
+
 RUN apt-get update && \
     apt-get install -y inotify-tools && \
     apt-get clean && \
@@ -17,10 +23,6 @@ ENV DNS=""
 ENV LISTEN_PORTS="443"
 
 EXPOSE 80 443
-
-COPY nginx.sh /nginx.sh
-
-COPY endpoint.sh /endpoint.sh
 
 ENTRYPOINT ["/endpoint.sh"]
 
