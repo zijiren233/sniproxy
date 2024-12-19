@@ -7,7 +7,7 @@ COPY endpoint.sh /endpoint.sh
 RUN chmod +x /nginx.sh /endpoint.sh
 
 RUN apt-get update && \
-    apt-get install -y inotify-tools && \
+    apt-get install -y inotify-tools bash && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
