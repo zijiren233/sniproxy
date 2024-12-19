@@ -2,10 +2,17 @@
 
 set -e
 
-if [ ! -f "domains.txt" ]; then
-    echo "adguardhome: domains.txt not found"
+if [ -z "$DOMAINS_FILE" ]; then
+    DOMAINS_FILE="domains.txt"
+fi
+if [ ! -f "$DOMAINS_FILE" ]; then
+    echo "adguardhome: $DOMAINS_FILE not found"
     exit 1
 fi
+if [ -z "$CONFIG_DIR" ]; then
+    CONFIG_DIR="./conf"
+fi
+mkdir -p $CONFIG_DIR
 
 function BuildRewrites() {
     # 打开文件并读取每一行
@@ -73,11 +80,12 @@ function BuildRewrites() {
             echo "    - domain: \"*.$DOMAIN\""
             echo "      answer: $IP"
         done
-    done <"domains.txt"
+    done <"$DOMAINS_FILE"
 }
 
-# 写入初始内容到AdGuardHome.yaml文件
-cat <<EOF >AdGuardHome.yaml
+readonly tmp_file=$(mktemp)
+
+cat <<EOF >$tmp_file
 http:
   pprof:
     port: 6060
@@ -253,5 +261,4 @@ os:
 schema_version: 28
 EOF
 
-mkdir -p conf
-mv -f AdGuardHome.yaml conf/AdGuardHome.yaml
+mv -f $tmp_file $CONFIG_DIR/AdGuardHome.yaml

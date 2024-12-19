@@ -2,30 +2,25 @@
 
 set -e
 
-if [ ! -f "domains.txt" ]; then
-    echo "nginx: domains.txt not found"
+if [ -z "$DOMAINS_FILE" ]; then
+    DOMAINS_FILE="domains.txt"
+fi
+if [ ! -f "$DOMAINS_FILE" ]; then
+    echo "nginx: $DOMAINS_FILE not found"
     exit 1
 fi
-
-ERROR_LOG="error_log off;"
-HOSTS_DEFAULT=""
-HOSTS_IPv4=""
-HOSTS_IPv6=""
-HOSTS_IPv4_BIND=""
-HOSTS_IPv6_BIND=""
-ALLOW=""
-EXTRA_STREAM_SERVERS=""
-DNS="1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]"
-DNS_CONFIG=""
-LISTEN_PORTS=""
+if [ -z "$CONFIG_DIR" ]; then
+    CONFIG_DIR="./conf"
+fi
+mkdir -p $CONFIG_DIR
 
 while getopts "46b:ed:p:" arg; do
     case $arg in
     4)
-        DNS_CONFIG=" ipv4=on ipv6=off"
+        DNS_CONFIG="ipv4=on ipv6=off"
         ;;
     6)
-        DNS_CONFIG=" ipv4=off ipv6=on"
+        DNS_CONFIG="ipv4=off ipv6=on"
         ;;
     b)
         DNS_CONFIG=""
@@ -52,8 +47,15 @@ if [ -z "$LISTEN_PORTS" ]; then
     LISTEN_PORTS="443"
 fi
 
+if [ -z "$DNS" ]; then
+    DNS="1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]"
+fi
 if [[ $DNS != *"valid="* ]]; then
     DNS="$DNS valid=15s"
+fi
+
+if [ -z "$ERROR_LOG" ]; then
+    ERROR_LOG="error_log off;"
 fi
 
 function IsIPv4() {
@@ -114,6 +116,14 @@ function BuildPools() {
     done
     unset IFS
 }
+
+HOSTS_DEFAULT=""
+HOSTS_IPv4=""
+HOSTS_IPv6=""
+HOSTS_IPv4_BIND=""
+HOSTS_IPv6_BIND=""
+ALLOW=""
+EXTRA_STREAM_SERVERS=""
 
 # 打开文件并读取每一行
 while IFS= read -r line; do
@@ -259,7 +269,7 @@ while IFS= read -r line; do
         fi
         ;;
     esac
-done <"domains.txt"
+done <"$DOMAINS_FILE"
 
 if [ -n "$ALLOW" ]; then
     ALLOW=$(echo -e "$ALLOW\n    deny all;")
@@ -341,7 +351,9 @@ if [ "$HOSTS_IPv6_BIND" != "" ]; then
     }"
 fi
 
-cat <<EOF >nginx.conf
+readonly tmp_file=$(mktemp)
+
+cat <<EOF >$tmp_file
 user nginx;
 worker_processes auto;
 pid /var/run/nginx.pid;
@@ -362,7 +374,7 @@ stream {
         default 1;
     }
     access_log /var/log/nginx/access.log basic if=\$loggable;
-    resolver $DNS$DNS_CONFIG;
+    resolver $DNS $DNS_CONFIG;
 
     $ALLOW
 
@@ -427,5 +439,4 @@ http {
 }
 EOF
 
-mkdir -p conf
-mv -f nginx.conf conf/nginx.conf
+mv -f $tmp_file $CONFIG_DIR/nginx.conf
