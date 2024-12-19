@@ -17,8 +17,9 @@ ALLOW=""
 EXTRA_STREAM_SERVERS=""
 DNS="1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]"
 DNS_CONFIG=""
+LISTEN_PORTS=""
 
-while getopts "46b:ed:" arg; do
+while getopts "46b:ed:p:" arg; do
     case $arg in
     4)
         DNS_CONFIG=" ipv4=on ipv6=off"
@@ -36,12 +37,20 @@ while getopts "46b:ed:" arg; do
     d)
         DNS="$OPTARG"
         ;;
+    p)
+        LISTEN_PORTS="$LISTEN_PORTS,$OPTARG"
+        ;;
     ?)
         echo "unkonw argument: $arg"
         return 1
         ;;
     esac
 done
+
+LISTEN_PORTS=$(echo $LISTEN_PORTS | xargs)
+if [ -z "$LISTEN_PORTS" ]; then
+    LISTEN_PORTS="443"
+fi
 
 if [[ $DNS != *"valid="* ]]; then
     DNS="$DNS valid=15s"
@@ -256,10 +265,28 @@ if [ -n "$ALLOW" ]; then
     ALLOW=$(echo -e "$ALLOW\n    deny all;")
 fi
 
+LISTEN_CONFIG=""
+REUSEPORT_CONFIG=""
+for port in $(echo $LISTEN_PORTS | tr ',' ' '); do
+    port=$(echo $port | xargs)
+    if [ -z "$port" ]; then
+        continue
+    fi
+    if [ -z "$LISTEN_CONFIG" ]; then
+        LISTEN_CONFIG="$(echo -e "listen $port;\n        listen [::]:$port;")"
+    else
+        LISTEN_CONFIG="$(echo -e "$LISTEN_CONFIG\n        listen $port;\n        listen [::]:$port;")"
+    fi
+    if [ -z "$REUSEPORT_CONFIG" ]; then
+        REUSEPORT_CONFIG="$(echo -e "listen $port reuseport so_keepalive=60s:20s:3;\n        listen [::]:$port reuseport so_keepalive=60s:20s:3;")"
+    else
+        REUSEPORT_CONFIG="$(echo -e "$REUSEPORT_CONFIG\n        listen $port reuseport so_keepalive=60s:20s:3;\n        listen [::]:$port reuseport so_keepalive=60s:20s:3;")"
+    fi
+done
+
 if [ "$HOSTS_DEFAULT" != "" ]; then
     DEFAULT_SERVER="server {
-        listen 443;
-        listen [::]:443;
+        $LISTEN_CONFIG
         server_name$HOSTS_DEFAULT;
         ssl_preread on;
 
@@ -270,8 +297,7 @@ fi
 
 if [ "$HOSTS_IPv4" != "" ]; then
     IPv4_SERVER="server {
-        listen 443;
-        listen [::]:443;
+        $LISTEN_CONFIG
         server_name$HOSTS_IPv4;
         ssl_preread on;
         resolver $DNS ipv4=on ipv6=off;
@@ -282,8 +308,7 @@ fi
 
 if [ "$HOSTS_IPv4_BIND" != "" ]; then
     IPv4_BIND_SERVER="server {
-        listen 443;
-        listen [::]:443;
+        $LISTEN_CONFIG
         server_name$HOSTS_IPv4_BIND;
         ssl_preread on;
         resolver $DNS ipv4=on ipv6=off;
@@ -295,8 +320,7 @@ fi
 
 if [ "$HOSTS_IPv6" != "" ]; then
     IPv6_SERVER="server {
-        listen 443;
-        listen [::]:443;
+        $LISTEN_CONFIG
         server_name$HOSTS_IPv6;
         ssl_preread on;
         resolver $DNS ipv4=off ipv6=on;
@@ -307,8 +331,7 @@ fi
 
 if [ "$HOSTS_IPv6_BIND" != "" ]; then
     IPv6_BIND_SERVER="server {
-        listen 443;
-        listen [::]:443;
+        $LISTEN_CONFIG
         server_name$HOSTS_IPv6_BIND;
         ssl_preread on;
         resolver $DNS ipv4=off ipv6=on;
@@ -372,8 +395,7 @@ $(BuildPools)
     $IPv6_SERVER
     $IPv6_BIND_SERVER
     server {
-        listen 443 reuseport so_keepalive=60s:20s:3;
-        listen [::]:443 reuseport so_keepalive=60s:20s:3;
+        $REUSEPORT_CONFIG
         server_name ~^.*$;
         ssl_preread on;
 

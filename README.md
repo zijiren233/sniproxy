@@ -132,6 +132,9 @@ bash run.sh -6
 # 如果默认使用绑定ip请求代理域名
 bash run.sh -b <ip>
 
+# 默认绑定443端口，如果要绑定其他端口或多个端口，则使用 -p 参数
+bash run.sh -p <port1>,<port2> -p <port3>
+
 # 如果你修改了domains.txt文件，需要重新启动服务
 # 也需要指定 -4 -6 -b 等参数，如 bash run.sh -4
 bash run.sh
