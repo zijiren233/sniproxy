@@ -45,6 +45,10 @@ function BuildRewrites() {
         if [[ $line == *"\`" ]]; then
             continue
         fi
+        # 检查是否以=开头，如果是则去掉=
+        if [[ $line == =* ]]; then
+            line="${line#=}"
+        fi
         # 如果是adguardhome规则，则获取IP列表 `#`
         if [[ $line == \#* ]]; then
             IPS=${line#*#}

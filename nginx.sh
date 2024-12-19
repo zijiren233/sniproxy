@@ -193,12 +193,20 @@ while IFS= read -r line; do
     DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
     SOURCE=$(echo $line | awk -F@ '{print $2}' | xargs)
 
-    if [ "$SOURCE" != "" ]; then
-        AddPool "$DOMAIN" "$SOURCE"
-        SOURCES=$(echo -e "$SOURCES\n        .$DOMAIN $(NewPoolName $DOMAIN);")
+    # 检查是否以=开头，如果是则不添加.前缀
+    if [[ $DOMAIN == =* ]]; then
+        DOMAIN="${DOMAIN#=}"
+        PREFIX=""
+    else
+        PREFIX="."
     fi
 
-    DOMAIN=".${DOMAIN}"
+    if [ "$SOURCE" != "" ]; then
+        AddPool "$DOMAIN" "$SOURCE"
+        SOURCES=$(echo -e "$SOURCES\n        $PREFIX$DOMAIN $(NewPoolName $DOMAIN);")
+    fi
+
+    DOMAIN="$PREFIX${DOMAIN}"
 
     # 如果速录限制不为空，则添加到RATES变量中
     if [ "$RATE" != "" ]; then

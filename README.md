@@ -21,6 +21,9 @@
   - 如: `netflix.com @127.0.0.1:443` 表示 `netflix.com` 使用 `127.0.0.1:443` 作为上游服务器
   - 如: `netflix.com @1.1.1.1 weight=5, 2.2.2.2 weight=10` 表示 `netflix.com` 使用 `1.1.1.1:443` 和 `2.2.2.2:443` 作为上游服务器，且权重大小分别为 `5` 和 `10`
   - 更多配置请参考 [nginx upstream](https://nginx.org/en/docs/stream/ngx_stream_upstream_module.html)
+- `=` 为 `nginx` 所用
+  - 用于指定当前域名不使用后缀匹配，而是精准匹配
+  - 如: `=github.com` 表示精准匹配 `github.com`，无法匹配到 `api.github.com`
 - `<` 为 `nginx` 所用
   - 用于指定接下来的域名的速率
   - 如果遇到空行会重置为默认
