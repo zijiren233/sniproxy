@@ -154,6 +154,9 @@ HOSTS_IPv6=""
 ALLOW=""
 EXTRA_STREAM_SERVERS=""
 DEFAULT_SOURCE=""
+GLOBAL_IP_VERSION=""
+GLOBAL_RATE=""
+GLOBAL_SOURCE=""
 
 # 存储已使用的bind组合
 used_bind_groups=""
@@ -163,9 +166,9 @@ while IFS= read -r line || [ -n "$line" ]; do
     line=$(echo "$line" | xargs)
     # 如果是空行则清空IP版本和速率限制以及默认SOURCE
     if [ -z "$line" ]; then
-        IP_VERSION=""
-        RATE=""
-        DEFAULT_SOURCE=""
+        IP_VERSION="$GLOBAL_IP_VERSION"
+        RATE="$GLOBAL_RATE"
+        DEFAULT_SOURCE="$GLOBAL_SOURCE"
         continue
     fi
     # 如果是注释行则跳过
@@ -176,28 +179,32 @@ while IFS= read -r line || [ -n "$line" ]; do
     if [[ $line == \#* ]]; then
         continue
     fi
+    # 如果是!!开头，则设置全局IP版本
+    if [[ $line == \!\!* ]]; then
+        GLOBAL_IP_VERSION="${line#!!}"
+        IP_VERSION="$GLOBAL_IP_VERSION"
+        continue
+    fi
     # 如果是!开头，则设置使用的IP版本
     if [[ $line == \!* ]]; then
         IP_VERSION="${line#!}"
-        # 按照,分割IP并添加到BIND_IPS中
-        BIND_IPS=""
-        for IP in $(echo $IP_VERSION | sed "s/,/ /g"); do
-            IP=$(echo $IP | xargs)
-            if [ -z "$IP" ]; then
-                continue
-            fi
-            if [ -z "$BIND_IPS" ]; then
-                BIND_IPS="$IP"
-            else
-                BIND_IPS="$BIND_IPS,$IP"
-            fi
-        done
-        IP_VERSION="$BIND_IPS"
+        continue
+    fi
+    # 如果是<<开头则设置全局速率限制
+    if [[ $line == \<\<* ]]; then
+        GLOBAL_RATE="${line#<<}"
+        RATE="$GLOBAL_RATE"
         continue
     fi
     # 如果是<开头则设置速录限制
     if [[ $line == \<* ]]; then
         RATE="${line#<}"
+        continue
+    fi
+    # 如果是@@开头则设置全局默认SOURCE
+    if [[ $line == @@* ]]; then
+        GLOBAL_SOURCE="${line#@@}"
+        DEFAULT_SOURCE="$GLOBAL_SOURCE"
         continue
     fi
     # 如果是@开头则设置默认SOURCE
