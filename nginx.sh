@@ -334,11 +334,11 @@ while IFS= read -r line || [ -n "$line" ]; do
             split_config=""
             for ((i = 0; i < total - 1; i++)); do
                 ip="${IPS[$i]}"
-                split_config="${split_config}            ${percent}%    ${ip};\n"
+                split_config="${split_config}        ${percent}%    ${ip};\n"
             done
-            split_config="${split_config}            *      ${IPS[$total - 1]};"
+            split_config="${split_config}        *      ${IPS[$total - 1]};"
 
-            SPLIT_CLIENTS=$(echo -e "$SPLIT_CLIENTS\n    split_clients \$remote_addr\$remote_port\$ssl_preread_server_name \$$split_var_name {\n$split_config\n    }")
+            SPLIT_CLIENTS=$(echo -e "$SPLIT_CLIENTS\n    split_clients \"\$remote_addr\$remote_port\$ssl_preread_server_name\" \$$split_var_name {\n$split_config\n    }")
             split_var_found="$split_var_name"
         fi
 
