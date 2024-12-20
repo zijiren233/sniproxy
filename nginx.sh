@@ -42,10 +42,51 @@ while getopts "46b:ed:p:" arg; do
     esac
 done
 
+# 展开端口范围
+function expand_port_range() {
+    local ports=$1
+    local expanded=""
+
+    # 按逗号分割
+    IFS=',' read -ra PORT_RANGES <<<"$ports"
+
+    for range in "${PORT_RANGES[@]}"; do
+        # 去除空格
+        range=$(echo "$range" | xargs)
+        if [[ $range =~ ^([0-9]+)-([0-9]+)$ ]]; then
+            # 是端口范围
+            start="${BASH_REMATCH[1]}"
+            end="${BASH_REMATCH[2]}"
+            if [ "$start" -gt "$end" ]; then
+                echo "Invalid port range: $range" >&2
+                exit 1
+            fi
+            for ((port = start; port <= end; port++)); do
+                if [ -z "$expanded" ]; then
+                    expanded="$port"
+                else
+                    expanded="$expanded,$port"
+                fi
+            done
+        else
+            # 单个端口
+            if [ -z "$expanded" ]; then
+                expanded="$range"
+            else
+                expanded="$expanded,$range"
+            fi
+        fi
+    done
+
+    # 去重
+    echo "$expanded" | tr ',' '\n' | sort -nu | tr '\n' ',' | sed 's/,$//'
+}
+
 LISTEN_PORTS=$(echo $LISTEN_PORTS | xargs)
 if [ -z "$LISTEN_PORTS" ]; then
     LISTEN_PORTS="443"
 fi
+LISTEN_PORTS=$(expand_port_range "$LISTEN_PORTS")
 
 if [ -z "$DNS" ]; then
     DNS="1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]"
@@ -99,18 +140,30 @@ function BuildPools() {
         local server="${key%@*}"
         local fields="${key#*@}"
         echo "    upstream $(NewPoolName ${server}) {"
-        # 按照,分割field并循环
-        IFS=','
+        # 按照,或;分割field并循环
+        IFS=',;'
         for server_addr in $fields; do
             # trim空格
             server_addr=$(echo "$server_addr" | xargs)
             # 获取第一个空格之前的地址
             local addr=$(echo "$server_addr" | awk '{print $1}')
-            # 如果地址没有端口号，则添加默认端口443
-            if [[ $addr != *:* ]]; then
-                server_addr="${addr}:443${server_addr#$addr}"
+
+            # 处理端口范围
+            if [[ $addr =~ ^(.*):([0-9]+-[0-9]+)$ ]]; then
+                local host="${BASH_REMATCH[1]}"
+                local port_range="${BASH_REMATCH[2]}"
+                local expanded_ports=$(expand_port_range "$port_range")
+                IFS=',' read -ra PORTS <<<"$expanded_ports"
+                for port in "${PORTS[@]}"; do
+                    echo "        server ${host}:${port}${server_addr#$addr};"
+                done
+            else
+                # 如果地址没有端口号，则添加默认端口443
+                if [[ $addr != *:* ]]; then
+                    server_addr="${addr}:443${server_addr#$addr}"
+                fi
+                echo "        server ${server_addr};"
             fi
-            echo "        server ${server_addr};"
         done
         echo "    }"
     done
@@ -125,8 +178,7 @@ HOSTS_IPv6_BIND=""
 ALLOW=""
 EXTRA_STREAM_SERVERS=""
 
-# 打开文件并读取每一行
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
     # trim
     line=$(echo "$line" | xargs)
     # 如果是空行则清空IP版本和速率限制

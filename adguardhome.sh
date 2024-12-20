@@ -16,7 +16,7 @@ mkdir -p $CONFIG_DIR
 
 function BuildRewrites() {
     # 打开文件并读取每一行
-    while IFS= read -r line; do
+    while IFS= read -r line || [ -n "$line" ]; do
         # trim
         line=$(echo "$line" | xargs)
         # 跳过空行
