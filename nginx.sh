@@ -99,6 +99,10 @@ if [ -z "$ERROR_LOG" ]; then
     ERROR_LOG="error_log off;"
 fi
 
+if [ -z "$WORKER_CONNECTIONS" ]; then
+    WORKER_CONNECTIONS="65535"
+fi
+
 function IsIPv4() {
     local IP=$1
     if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -410,13 +414,13 @@ user nginx;
 worker_processes auto;
 pid /var/run/nginx.pid;
 $ERROR_LOG
-worker_rlimit_nofile 51200;
+worker_rlimit_nofile 65535;
 
 events
 {
     use epoll;
-    # oom
-    # worker_connections 51200;
+    # maybe oom
+    worker_connections $WORKER_CONNECTIONS;
     multi_accept on;
 }
 
