@@ -460,12 +460,12 @@ $(BuildPools)
         hostnames;$RATES
         default 0;
     }
-    proxy_connect_timeout 10s;
+    proxy_connect_timeout 15s;
     proxy_timeout 90s;
     proxy_buffer_size 24k;
     tcp_nodelay on;
-    preread_timeout 10s;
-    resolver_timeout 10s;
+    preread_timeout 15s;
+    resolver_timeout 15s;
     proxy_socket_keepalive on;
     proxy_upload_rate \$rate;
     proxy_download_rate \$rate;
