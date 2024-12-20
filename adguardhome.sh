@@ -39,6 +39,10 @@ function BuildRewrites() {
         if [[ $line == \&* ]]; then
             continue
         fi
+        # 跳过@开头
+        if [[ $line == @* ]]; then
+            continue
+        fi
         # 跳过nginx多行注释块 ``` 开头
         if [[ $line == "\`\`\`"* ]]; then
             while IFS= read -r command_line; do

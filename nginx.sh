@@ -182,14 +182,16 @@ HOSTS_IPv4_BIND=""
 HOSTS_IPv6_BIND=""
 ALLOW=""
 EXTRA_STREAM_SERVERS=""
+DEFAULT_SOURCE=""
 
 while IFS= read -r line || [ -n "$line" ]; do
     # trim
     line=$(echo "$line" | xargs)
-    # 如果是空行则清空IP版本和速率限制
+    # 如果是空行则清空IP版本和速率限制以及默认SOURCE
     if [ -z "$line" ]; then
         IP_VERSION=""
         RATE=""
+        DEFAULT_SOURCE=""
         continue
     fi
     # 如果是注释行则跳过
@@ -208,6 +210,11 @@ while IFS= read -r line || [ -n "$line" ]; do
     # 如果是<开头则设置速录限制
     if [[ $line == \<* ]]; then
         RATE="${line#<}"
+        continue
+    fi
+    # 如果是@开头则设置默认SOURCE
+    if [[ $line == @* ]]; then
+        DEFAULT_SOURCE="${line#@}"
         continue
     fi
     # 如果是&开头则设置允许的IP
@@ -275,6 +282,11 @@ while IFS= read -r line || [ -n "$line" ]; do
         PREFIX=""
     else
         PREFIX="."
+    fi
+
+    # 如果SOURCE为空且DEFAULT_SOURCE不为空，则使用DEFAULT_SOURCE
+    if [ -z "$SOURCE" ] && [ -n "$DEFAULT_SOURCE" ]; then
+        SOURCE="$DEFAULT_SOURCE"
     fi
 
     if [ "$SOURCE" != "" ]; then
