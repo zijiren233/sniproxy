@@ -462,12 +462,11 @@ $(BuildPools)
     }
     proxy_connect_timeout 10s;
     proxy_timeout 90s;
-    proxy_buffer_size 32k;
+    proxy_buffer_size 24k;
     tcp_nodelay on;
     preread_timeout 10s;
     resolver_timeout 10s;
     proxy_socket_keepalive on;
-    proxy_half_close on;
     proxy_upload_rate \$rate;
     proxy_download_rate \$rate;
     $DEFAULT_SERVER
