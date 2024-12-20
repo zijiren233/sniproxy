@@ -2,9 +2,9 @@ FROM nginx:1.26
 
 COPY nginx.sh /nginx.sh
 
-COPY endpoint.sh /endpoint.sh
+COPY entrypoint.sh /entrypoint.sh
 
-RUN chmod +x /nginx.sh /endpoint.sh
+RUN chmod +x /nginx.sh /entrypoint.sh
 
 RUN apt-get update && \
     apt-get install -y inotify-tools bash && \
@@ -21,6 +21,6 @@ ENV LISTEN_PORTS="443"
 
 EXPOSE 80 443
 
-ENTRYPOINT ["/endpoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
 
 CMD ["nginx", "-g", "daemon off;"]
