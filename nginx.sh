@@ -144,6 +144,7 @@ function BuildPools() {
         local server="${key%@*}"
         local fields="${key#*@}"
         echo "    upstream $(NewPoolName ${server}) {"
+        echo "        random two least_conn;"
         # 按照,或;分割field并循环
         IFS=',;'
         for server_addr in $fields; do
