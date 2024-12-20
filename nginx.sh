@@ -14,18 +14,8 @@ if [ -z "$CONFIG_DIR" ]; then
 fi
 mkdir -p $CONFIG_DIR
 
-while getopts "46b:ed:p:" arg; do
+while getopts "ed:p:" arg; do
     case $arg in
-    4)
-        DNS_CONFIG="ipv4=on ipv6=off"
-        ;;
-    6)
-        DNS_CONFIG="ipv4=off ipv6=on"
-        ;;
-    b)
-        DNS_CONFIG=""
-        BIND="proxy_bind $OPTARG;"
-        ;;
     e)
         ERROR_LOG="error_log /var/log/nginx/error.log notice;"
         ;;
@@ -103,23 +93,6 @@ if [ -z "$WORKER_CONNECTIONS" ]; then
     WORKER_CONNECTIONS="65535"
 fi
 
-function IsIPv4() {
-    local IP=$1
-    if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "0"
-    else
-        echo "1"
-    fi
-}
-
-function IsIPv6() {
-    if [[ "$1" =~ ^[0-9a-fA-F:]+$ ]]; then
-        echo "0"
-    else
-        echo "1"
-    fi
-}
-
 pools=()
 
 function AddPool() {
@@ -178,11 +151,12 @@ function BuildPools() {
 HOSTS_DEFAULT=""
 HOSTS_IPv4=""
 HOSTS_IPv6=""
-HOSTS_IPv4_BIND=""
-HOSTS_IPv6_BIND=""
 ALLOW=""
 EXTRA_STREAM_SERVERS=""
 DEFAULT_SOURCE=""
+
+# 存储已使用的bind组合
+used_bind_groups=""
 
 while IFS= read -r line || [ -n "$line" ]; do
     # trim
@@ -205,6 +179,20 @@ while IFS= read -r line || [ -n "$line" ]; do
     # 如果是!开头，则设置使用的IP版本
     if [[ $line == \!* ]]; then
         IP_VERSION="${line#!}"
+        # 按照,分割IP并添加到BIND_IPS中
+        BIND_IPS=""
+        for IP in $(echo $IP_VERSION | sed "s/,/ /g"); do
+            IP=$(echo $IP | xargs)
+            if [ -z "$IP" ]; then
+                continue
+            fi
+            if [ -z "$BIND_IPS" ]; then
+                BIND_IPS="$IP"
+            else
+                BIND_IPS="$BIND_IPS,$IP"
+            fi
+        done
+        IP_VERSION="$BIND_IPS"
         continue
     fi
     # 如果是<开头则设置速录限制
@@ -303,39 +291,53 @@ while IFS= read -r line || [ -n "$line" ]; do
 
     case $IP_VERSION in
     "ipv4")
-        if [ "$HOSTS_IPv4" == "" ]; then
-            HOSTS_IPv4=""
-        fi
         HOSTS_IPv4="$HOSTS_IPv4 $DOMAIN"
         ;;
     "ipv6")
-        if [ "$HOSTS_IPv6" == "" ]; then
-            HOSTS_IPv6=""
-        fi
         HOSTS_IPv6="$HOSTS_IPv6 $DOMAIN"
         ;;
     "")
-        if [ "$HOSTS_DEFAULT" == "" ]; then
-            HOSTS_DEFAULT=""
-        fi
         HOSTS_DEFAULT="$HOSTS_DEFAULT $DOMAIN"
         ;;
     *)
-        BINDS=$(echo -e "$BINDS\n        $DOMAIN $IP_VERSION;")
-        if [ $(IsIPv4 $IP_VERSION) -eq 0 ]; then
-            if [ "$HOSTS_IPv4_BIND" == "" ]; then
-                HOSTS_IPv4_BIND=""
+        # 按照,分割IP并排序
+        IFS=',' read -ra IPS <<<"$IP_VERSION"
+        IPS_SORTED=($(printf "%s\n" "${IPS[@]}" | sort))
+        bind_key=$(echo "${IPS_SORTED[*]}" | tr ' ' ',')
+
+        # 在已有的bind组合中查找
+        split_var_found=""
+        while IFS='=' read -r key value; do
+            if [ "$key" = "$bind_key" ]; then
+                split_var_found=$(echo "$value" | xargs)
+                break
             fi
-            HOSTS_IPv4_BIND="$HOSTS_IPv4_BIND $DOMAIN"
-        elif [ $(IsIPv6 $IP_VERSION) -eq 0 ]; then
-            if [ "$HOSTS_IPv6_BIND" == "" ]; then
-                HOSTS_IPv6_BIND=""
-            fi
-            HOSTS_IPv6_BIND="$HOSTS_IPv6_BIND $DOMAIN"
-        else
-            echo "nginx: unknown IP version: $IP_VERSION, only ipv4 or ipv6 are supported"
-            exit 1
+        done <<<"$used_bind_groups"
+
+        if [ -z "$split_var_found" ]; then
+            # 如果这个bind组合是新的
+            split_var_name="split_ip_$(echo "$bind_key" | md5sum | cut -c1-8)"
+            used_bind_groups=$(echo -e "$used_bind_groups\n$bind_key=$split_var_name")
+
+            # 生成split_clients配置
+            total=${#IPS[@]}
+            percent=$((100 / total))
+            remaining=$((100 % total))
+
+            split_config=""
+            for ((i = 0; i < total - 1; i++)); do
+                ip="${IPS[$i]}"
+                split_config="${split_config}            ${percent}%    ${ip};\n"
+            done
+            split_config="${split_config}            *      ${IPS[$total - 1]};"
+
+            SPLIT_CLIENTS=$(echo -e "$SPLIT_CLIENTS\n    split_clients \$remote_addr\$remote_port\$ssl_preread_server_name \$$split_var_name {\n$split_config\n    }")
+            split_var_found="$split_var_name"
         fi
+
+        # 使用已存在的split变量
+        BINDS=$(echo -e "$BINDS\n        $DOMAIN \$$split_var_found;")
+        HOSTS_DEFAULT="$HOSTS_DEFAULT $DOMAIN"
         ;;
     esac
 done <"$DOMAINS_FILE"
@@ -370,7 +372,7 @@ if [ "$HOSTS_DEFAULT" != "" ]; then
         ssl_preread on;
 
         proxy_pass \$source;
-        $BIND
+        proxy_bind \$bind;
     }"
 fi
 
@@ -385,18 +387,6 @@ if [ "$HOSTS_IPv4" != "" ]; then
     }"
 fi
 
-if [ "$HOSTS_IPv4_BIND" != "" ]; then
-    IPv4_BIND_SERVER="server {
-        $LISTEN_CONFIG
-        server_name$HOSTS_IPv4_BIND;
-        ssl_preread on;
-        resolver $DNS ipv4=on ipv6=off;
-
-        proxy_pass \$source;
-        proxy_bind \$bind;
-    }"
-fi
-
 if [ "$HOSTS_IPv6" != "" ]; then
     IPv6_SERVER="server {
         $LISTEN_CONFIG
@@ -405,18 +395,6 @@ if [ "$HOSTS_IPv6" != "" ]; then
         resolver $DNS ipv4=off ipv6=on;
 
         proxy_pass \$source;
-    }"
-fi
-
-if [ "$HOSTS_IPv6_BIND" != "" ]; then
-    IPv6_BIND_SERVER="server {
-        $LISTEN_CONFIG
-        server_name$HOSTS_IPv6_BIND;
-        ssl_preread on;
-        resolver $DNS ipv4=off ipv6=on;
-
-        proxy_pass \$source;
-        proxy_bind \$bind;
     }"
 fi
 
@@ -438,12 +416,12 @@ events
 }
 
 stream {
-    log_format basic '[\$time_local] \$remote_addr:\$remote_port → \$ssl_preread_server_name | \$upstream_addr | ↑ \$upstream_bytes_sent | ↓ \$upstream_bytes_received | \$session_time s | \$status';
+    log_format basic '[\$time_local] \$remote_addr:\$remote_port → \$server_addr:\$server_port | \$ssl_preread_server_name | \$upstream_addr | ↑ \$upstream_bytes_sent | ↓ \$upstream_bytes_received | \$session_time s | \$status';
     map \$status \$loggable {
         default 1;
     }
     access_log /var/log/nginx/access.log basic if=\$loggable;
-    resolver $DNS $DNS_CONFIG;
+    resolver $DNS;
 
     $ALLOW
 
@@ -452,14 +430,17 @@ $(BuildPools)
         hostnames;$SOURCES
         default \$ssl_preread_server_name:443;
     }
-    map \$ssl_preread_server_name \$bind {
-        hostnames;$BINDS
-        default 0;
-    }
     map \$ssl_preread_server_name \$rate {
         hostnames;$RATES
         default 0;
     }
+    map \$ssl_preread_server_name \$bind {
+        hostnames;$BINDS
+        default \$server_addr;
+    }
+
+$SPLIT_CLIENTS
+
     proxy_connect_timeout 15s;
     proxy_timeout 90s;
     proxy_buffer_size 24k;
@@ -471,9 +452,7 @@ $(BuildPools)
     proxy_download_rate \$rate;
     $DEFAULT_SERVER
     $IPv4_SERVER
-    $IPv4_BIND_SERVER
     $IPv6_SERVER
-    $IPv6_BIND_SERVER
     server {
         $REUSEPORT_CONFIG
         server_name ~^.*$;
