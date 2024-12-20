@@ -37,8 +37,8 @@ fi
             cat $DOMAINS_FILE
             continue
         fi
-        nginx -t && nginx -s reload
         echo "generate nginx.conf success"
+        nginx -t && nginx -s reload
     done
 ) &
 
