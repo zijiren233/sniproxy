@@ -16,11 +16,11 @@ mkdir -p $CONFIG_DIR
 
 while getopts "ed:p:nh:" arg; do
     case $arg in
-    e)
-        ERROR_LOG="error_log /var/log/nginx/error.log notice;"
-        ;;
     d)
         DNS="$OPTARG"
+        ;;
+    e)
+        ERROR_LOG="error_log /var/log/nginx/error.log notice;"
         ;;
     p)
         LISTEN_PORTS="$LISTEN_PORTS,$OPTARG"
@@ -92,7 +92,7 @@ if [[ $DNS != *"valid="* ]]; then
 fi
 
 if [ -z "$ERROR_LOG" ]; then
-    ERROR_LOG="error_log off;"
+    ERROR_LOG="error_log /dev/null;"
 fi
 
 if [ -z "$WORKER_CONNECTIONS" ]; then
