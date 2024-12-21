@@ -4,9 +4,9 @@ set -e
 
 RAW_ARGS="$@"
 
-# 如果参数中有除 ed:p: 之外的参数，则传递给 docker-compose
+# 如果参数中有除 ed:p:nh: 之外的参数，则传递给 docker-compose
 if [ $# -gt 0 ]; then
-    while getopts "ed:p:" arg; do
+    while getopts "ed:p:nh:" arg; do
         case $arg in
         ?) ;;
         esac

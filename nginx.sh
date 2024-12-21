@@ -14,7 +14,7 @@ if [ -z "$CONFIG_DIR" ]; then
 fi
 mkdir -p $CONFIG_DIR
 
-while getopts "ed:p:" arg; do
+while getopts "ed:p:nh:" arg; do
     case $arg in
     e)
         ERROR_LOG="error_log /var/log/nginx/error.log notice;"
@@ -24,6 +24,12 @@ while getopts "ed:p:" arg; do
         ;;
     p)
         LISTEN_PORTS="$LISTEN_PORTS,$OPTARG"
+        ;;
+    n)
+        DISABLE_HTTP=1
+        ;;
+    h)
+        HTTP_PORTS="$OPTARG"
         ;;
     ?)
         echo "unkonw argument: $arg"
@@ -93,6 +99,11 @@ if [ -z "$WORKER_CONNECTIONS" ]; then
     WORKER_CONNECTIONS="65535"
 fi
 
+if [ -z "$HTTP_PORTS" ]; then
+    HTTP_PORTS="80"
+fi
+HTTP_PORTS=$(expand_port_range "$HTTP_PORTS")
+
 pools=()
 
 function AddPool() {
@@ -157,6 +168,7 @@ DEFAULT_SOURCE=""
 GLOBAL_IP_VERSION=""
 GLOBAL_RATE=""
 GLOBAL_SOURCE=""
+HTTP_SERVER=""
 
 # 存储已使用的bind组合
 used_bind_groups=""
@@ -405,6 +417,28 @@ if [ "$HOSTS_IPv6" != "" ]; then
     }"
 fi
 
+if [ -z "$DISABLE_HTTP" ]; then
+    HTTP_LISTEN_CONFIG=""
+    for port in $(echo $HTTP_PORTS | tr ',' ' '); do
+        port=$(echo $port | xargs)
+        if [ -z "$port" ]; then
+            continue
+        fi
+        if [ -z "$HTTP_LISTEN_CONFIG" ]; then
+            HTTP_LISTEN_CONFIG="$(echo -e "listen $port default_server reuseport;\n        listen [::]:$port default_server reuseport;")"
+        else
+            HTTP_LISTEN_CONFIG="$(echo -e "$HTTP_LISTEN_CONFIG\n        listen $port default_server reuseport;\n        listen [::]:$port default_server reuseport;")"
+        fi
+    done
+
+    HTTP_SERVER="server {
+        $HTTP_LISTEN_CONFIG
+        server_name _;
+
+        return 302 https://\$http_host\$request_uri;
+    }"
+fi
+
 readonly tmp_file=$(mktemp)
 
 cat <<EOF >$tmp_file
@@ -483,13 +517,7 @@ http {
 
     $ALLOW
 
-    server {
-        listen 80 default_server reuseport;
-        listen [::]:80 default_server reuseport;
-        server_name _;
-
-        return 302 https://\$http_host\$request_uri;
-    }
+    $HTTP_SERVER
 }
 EOF
 
