@@ -455,7 +455,7 @@ events
 }
 
 stream {
-    log_format basic '[\$time_local] \$remote_addr:\$remote_port → \$server_addr:\$server_port | \$ssl_preread_server_name | \$upstream_addr | ↑ \$upstream_bytes_sent | ↓ \$upstream_bytes_received | \$session_time s | \$status';
+    log_format basic '[\$time_local] \$remote_addr:\$remote_port → \$server_addr:\$server_port | \$ssl_preread_server_name|\$ssl_preread_protocol|\$ssl_preread_alpn_protocols | \$bind -> \$upstream_addr | ↑ \$upstream_bytes_sent | ↓ \$upstream_bytes_received | \$session_time s | \$status';
     map \$status \$loggable {
         default 1;
     }
