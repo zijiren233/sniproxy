@@ -82,7 +82,6 @@ LISTEN_PORTS=$(echo $LISTEN_PORTS | xargs)
 if [ -z "$LISTEN_PORTS" ]; then
     LISTEN_PORTS="443"
 fi
-LISTEN_PORTS=$(expand_port_range "$LISTEN_PORTS")
 
 if [ -z "$DNS" ]; then
     DNS="1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]"
@@ -102,7 +101,6 @@ fi
 if [ -z "$HTTP_PORTS" ]; then
     HTTP_PORTS="80"
 fi
-HTTP_PORTS=$(expand_port_range "$HTTP_PORTS")
 
 pools=()
 
