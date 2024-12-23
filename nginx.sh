@@ -511,7 +511,7 @@ http {
     tcp_nodelay on;
     server_tokens off;
     access_log off;
-    error_log off;
+    error_log /dev/null;
 
     $ALLOW
 
