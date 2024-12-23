@@ -164,7 +164,9 @@ function BuildPools() {
 
 HOSTS_DEFAULT=""
 HOSTS_IPv4=""
+HOSTS_IPv4_BIND=""
 HOSTS_IPv6=""
+HOSTS_IPv6_BIND=""
 ALLOW=""
 EXTRA_STREAM_SERVERS=""
 DEFAULT_SOURCE=""
@@ -175,6 +177,34 @@ HTTP_SERVER=""
 
 # 存储已使用的bind组合
 used_bind_groups=""
+
+# 检查IP版本是否一致
+function check_ip_version() {
+    local ips="$1"
+    local is_ipv4=0
+    local is_ipv6=0
+    
+    IFS=',' read -ra IP_LIST <<<"$ips"
+    for ip in "${IP_LIST[@]}"; do
+        ip=$(echo "$ip" | xargs)
+        if [[ $ip =~ ^\[.*\]$ ]] || [[ $ip =~ : ]]; then
+            is_ipv6=1
+        else
+            is_ipv4=1
+        fi
+    done
+    
+    if [ $is_ipv4 -eq 1 ] && [ $is_ipv6 -eq 1 ]; then
+        echo "Error: Mixed IP versions in bind group: $ips" >&2
+        exit 1
+    fi
+    
+    if [ $is_ipv6 -eq 1 ]; then
+        echo "ipv6"
+    else
+        echo "ipv4"
+    fi
+}
 
 while IFS= read -r line || [ -n "$line" ]; do
     # trim
@@ -326,7 +356,10 @@ while IFS= read -r line || [ -n "$line" ]; do
         IFS=',' read -ra IPS <<<"$IP_VERSION"
         IPS_SORTED=($(printf "%s\n" "${IPS[@]}" | sort))
         bind_key=$(echo "${IPS_SORTED[*]}" | tr ' ' ',')
-
+        
+        # 检查IP版本是否一致
+        ip_version=$(check_ip_version "$bind_key")
+        
         # 在已有的bind组合中查找
         split_var_found=""
         while IFS='=' read -r key value; do
@@ -359,7 +392,13 @@ while IFS= read -r line || [ -n "$line" ]; do
 
         # 使用已存在的split变量
         BINDS=$(echo -e "$BINDS\n        $DOMAIN \$$split_var_found;")
-        HOSTS_DEFAULT="$HOSTS_DEFAULT $DOMAIN"
+        
+        # 根据IP版本添加到对应的HOSTS变量
+        if [ "$ip_version" = "ipv4" ]; then
+            HOSTS_IPv4_BIND="$HOSTS_IPv4_BIND $DOMAIN"
+        else
+            HOSTS_IPv6_BIND="$HOSTS_IPv6_BIND $DOMAIN"
+        fi
         ;;
     esac
 done <"$DOMAINS_FILE"
@@ -388,18 +427,19 @@ for port in $(echo $LISTEN_PORTS | tr ',' ' '); do
 done
 
 if [ "$HOSTS_DEFAULT" != "" ]; then
-    DEFAULT_SERVER="server {
+    DEFAULT_SERVER="# default server
+    server {
         $LISTEN_CONFIG
         server_name$HOSTS_DEFAULT;
         ssl_preread on;
 
         proxy_pass \$source;
-        proxy_bind \$bind;
     }"
 fi
 
 if [ "$HOSTS_IPv4" != "" ]; then
-    IPv4_SERVER="server {
+    IPv4_SERVER="# ipv4 server
+    server {
         $LISTEN_CONFIG
         server_name$HOSTS_IPv4;
         ssl_preread on;
@@ -409,14 +449,41 @@ if [ "$HOSTS_IPv4" != "" ]; then
     }"
 fi
 
+if [ "$HOSTS_IPv4_BIND" != "" ]; then
+    IPv4_BIND_SERVER="# ipv4 bind server
+    server {
+        $LISTEN_CONFIG
+        server_name$HOSTS_IPv4_BIND;
+        ssl_preread on;
+        resolver $DNS ipv4=on ipv6=off;
+
+        proxy_pass \$source;
+        proxy_bind \$bind;
+    }"
+fi
+
 if [ "$HOSTS_IPv6" != "" ]; then
-    IPv6_SERVER="server {
+    IPv6_SERVER="# ipv6 server
+    server {
         $LISTEN_CONFIG
         server_name$HOSTS_IPv6;
         ssl_preread on;
         resolver $DNS ipv4=off ipv6=on;
 
         proxy_pass \$source;
+    }"
+fi
+
+if [ "$HOSTS_IPv6_BIND" != "" ]; then
+    IPv6_BIND_SERVER="# ipv6 bind server
+    server {
+        $LISTEN_CONFIG
+        server_name$HOSTS_IPv6_BIND;
+        ssl_preread on;
+        resolver $DNS ipv4=off ipv6=on;
+
+        proxy_pass \$source;
+        proxy_bind \$bind;
     }"
 fi
 
@@ -434,7 +501,8 @@ if [ -z "$DISABLE_HTTP" ]; then
         fi
     done
 
-    HTTP_SERVER="server {
+    HTTP_SERVER="# http server
+    server {
         $HTTP_LISTEN_CONFIG
         server_name _;
 
@@ -466,7 +534,7 @@ stream {
         default 1;
     }
     access_log /var/log/nginx/access.log basic if=\$loggable;
-    resolver $DNS;
+    resolver $DNS ipv4=on ipv6=on;
 
     $ALLOW
 
@@ -497,7 +565,10 @@ $SPLIT_CLIENTS
     proxy_download_rate \$rate;
     $DEFAULT_SERVER
     $IPv4_SERVER
+    $IPv4_BIND_SERVER
     $IPv6_SERVER
+    $IPv6_BIND_SERVER
+    # reuseport server and reject all
     server {
         $REUSEPORT_CONFIG
         server_name ~^.*$;
