@@ -25,9 +25,14 @@
   - 更多配置请参考 [nginx upstream](https://nginx.org/en/docs/stream/ngx_stream_upstream_module.html)
   - 也可以定义为 `@` 开头的行，用于指定接下来所有域名使用的源服务器地址
   - 如果遇到空行会重置为默认
-- `=` 为 `nginx` 所用
-  - 用于指定当前域名不使用后缀匹配，而是精准匹配
-  - 如: `=github.com` 表示精准匹配 `github.com`，无法匹配到 `api.github.com`
+- 默认情况下域名使用hostname匹配，如 `github.com` 可以匹配 `api.github.com` 和 `github.com`
+  - `=` 开头表示精确匹配
+    - 如: `=github.com` 表示精准匹配 `github.com`，无法匹配到 `api.github.com`
+  - `*` 开头或结尾表示通配符匹配
+    - 如: `*.github.com` 可以匹配 `api.github.com` 但不能匹配 `github.com`
+    - 如: `github.*` 可以匹配 `github.com` 和 `github.net`
+  - `~` 开头表示正则匹配
+    - 如: `~^api\..*\.com$` 可以匹配所有以api开头的.com域名
 - `<` 为 `nginx` 所用
   - 用于指定接下来的域名的速率
   - 如果遇到空行会重置为默认

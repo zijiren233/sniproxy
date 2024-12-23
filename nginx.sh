@@ -120,10 +120,9 @@ function AddPool() {
     pools+=("$1@$field")
 }
 
-# 把.替换成_,把:替换成-
+# 使用短sha1作为pool名称
 function NewPoolName() {
-    local POOL_NAME=${1//./_}
-    echo ${POOL_NAME//:/-}
+    echo "upstream_$(echo -n "$1" | sha1sum | cut -c1-8)"
 }
 
 function BuildPools() {
@@ -183,7 +182,7 @@ function check_ip_version() {
     local ips="$1"
     local is_ipv4=0
     local is_ipv6=0
-    
+
     IFS=',' read -ra IP_LIST <<<"$ips"
     for ip in "${IP_LIST[@]}"; do
         ip=$(echo "$ip" | xargs)
@@ -193,12 +192,12 @@ function check_ip_version() {
             is_ipv4=1
         fi
     done
-    
+
     if [ $is_ipv4 -eq 1 ] && [ $is_ipv6 -eq 1 ]; then
         echo "Error: Mixed IP versions in bind group: $ips" >&2
         exit 1
     fi
-    
+
     if [ $is_ipv6 -eq 1 ]; then
         echo "ipv6"
     else
@@ -316,12 +315,31 @@ while IFS= read -r line || [ -n "$line" ]; do
     DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
     SOURCE=$(echo $line | awk -F@ '{print $2}' | xargs)
 
-    # 检查是否以=开头，如果是则不添加.前缀
+    # 检查DOMAIN是否有空格
+    if [[ $DOMAIN == *" "* ]]; then
+        echo "Error: DOMAIN contains spaces: $DOMAIN" >&2
+        exit 1
+    fi
+
+    # 检查域名格式并设置前缀
     if [[ $DOMAIN == =* ]]; then
+        # =开头的域名
         DOMAIN="${DOMAIN#=}"
-        PREFIX=""
+    elif [[ $DOMAIN == ~* ]]; then
+        # ~开头的正则表达式
+        true
+    elif [[ $DOMAIN == \** ]]; then
+        # *开头的域名
+        true
+    elif [[ $DOMAIN == *\* ]]; then
+        # *结尾的域名
+        true
+    elif [[ $DOMAIN == .* ]]; then
+        # .开头的域名
+        true
     else
-        PREFIX="."
+        # 默认添加.前缀
+        DOMAIN=".${DOMAIN}"
     fi
 
     # 如果SOURCE为空且DEFAULT_SOURCE不为空，则使用DEFAULT_SOURCE
@@ -331,10 +349,8 @@ while IFS= read -r line || [ -n "$line" ]; do
 
     if [ "$SOURCE" != "" ]; then
         AddPool "$DOMAIN" "$SOURCE"
-        SOURCES=$(echo -e "$SOURCES\n        $PREFIX$DOMAIN $(NewPoolName $DOMAIN);")
+        SOURCES=$(echo -e "$SOURCES\n        $DOMAIN $(NewPoolName $DOMAIN);")
     fi
-
-    DOMAIN="$PREFIX${DOMAIN}"
 
     # 如果速录限制不为空，则添加到RATES变量中
     if [ "$RATE" != "" ]; then
@@ -356,43 +372,48 @@ while IFS= read -r line || [ -n "$line" ]; do
         IFS=',' read -ra IPS <<<"$IP_VERSION"
         IPS_SORTED=($(printf "%s\n" "${IPS[@]}" | sort))
         bind_key=$(echo "${IPS_SORTED[*]}" | tr ' ' ',')
-        
+
         # 检查IP版本是否一致
         ip_version=$(check_ip_version "$bind_key")
-        
-        # 在已有的bind组合中查找
-        split_var_found=""
-        while IFS='=' read -r key value; do
-            if [ "$key" = "$bind_key" ]; then
-                split_var_found=$(echo "$value" | xargs)
-                break
+
+        # 如果只有一个IP，直接使用该IP作为bind地址
+        if [ ${#IPS[@]} -eq 1 ]; then
+            BINDS=$(echo -e "$BINDS\n        $DOMAIN ${IPS[0]};")
+        else
+            # 在已有的bind组合中查找
+            split_var_found=""
+            while IFS='=' read -r key value; do
+                if [ "$key" = "$bind_key" ]; then
+                    split_var_found=$(echo "$value" | xargs)
+                    break
+                fi
+            done <<<"$used_bind_groups"
+
+            if [ -z "$split_var_found" ]; then
+                # 如果这个bind组合是新的
+                split_var_name="split_ip_$(echo "$bind_key" | md5sum | cut -c1-8)"
+                used_bind_groups=$(echo -e "$used_bind_groups\n$bind_key=$split_var_name")
+
+                # 生成split_clients配置
+                total=${#IPS[@]}
+                percent=$((100 / total))
+                remaining=$((100 % total))
+
+                split_config=""
+                for ((i = 0; i < total - 1; i++)); do
+                    ip="${IPS[$i]}"
+                    split_config="${split_config}        ${percent}%    ${ip};\n"
+                done
+                split_config="${split_config}        *      ${IPS[$total - 1]};"
+
+                SPLIT_CLIENTS=$(echo -e "$SPLIT_CLIENTS\n    split_clients \"\$remote_addr\$remote_port\$ssl_preread_server_name\" \$$split_var_name {\n$split_config\n    }")
+                split_var_found="$split_var_name"
             fi
-        done <<<"$used_bind_groups"
 
-        if [ -z "$split_var_found" ]; then
-            # 如果这个bind组合是新的
-            split_var_name="split_ip_$(echo "$bind_key" | md5sum | cut -c1-8)"
-            used_bind_groups=$(echo -e "$used_bind_groups\n$bind_key=$split_var_name")
-
-            # 生成split_clients配置
-            total=${#IPS[@]}
-            percent=$((100 / total))
-            remaining=$((100 % total))
-
-            split_config=""
-            for ((i = 0; i < total - 1; i++)); do
-                ip="${IPS[$i]}"
-                split_config="${split_config}        ${percent}%    ${ip};\n"
-            done
-            split_config="${split_config}        *      ${IPS[$total - 1]};"
-
-            SPLIT_CLIENTS=$(echo -e "$SPLIT_CLIENTS\n    split_clients \"\$remote_addr\$remote_port\$ssl_preread_server_name\" \$$split_var_name {\n$split_config\n    }")
-            split_var_found="$split_var_name"
+            # 使用已存在的split变量
+            BINDS=$(echo -e "$BINDS\n        $DOMAIN \$$split_var_found;")
         fi
 
-        # 使用已存在的split变量
-        BINDS=$(echo -e "$BINDS\n        $DOMAIN \$$split_var_found;")
-        
         # 根据IP版本添加到对应的HOSTS变量
         if [ "$ip_version" = "ipv4" ]; then
             HOSTS_IPv4_BIND="$HOSTS_IPv4_BIND $DOMAIN"
