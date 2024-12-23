@@ -28,23 +28,35 @@ fi
 case "$MORE_ARGS" in
 adguardhome)
     bash ./adguardhome.sh
-    ($DOCKER_COMPOSE exec adguardhome true && $DOCKER_COMPOSE restart adguardhome) ||
-        ($DOCKER_COMPOSE pull adguardhome && $DOCKER_COMPOSE down adguardhome && $DOCKER_COMPOSE up adguardhome -d)
+    ($DOCKER_COMPOSE exec adguardhome true &&
+        ($DOCKER_COMPOSE restart adguardhome)) ||
+        ($DOCKER_COMPOSE pull adguardhome &&
+            $DOCKER_COMPOSE down adguardhome &&
+            $DOCKER_COMPOSE up adguardhome -d)
     ;;
 nginx)
     bash ./nginx.sh $RAW_ARGS
-    ($DOCKER_COMPOSE exec nginx nginx -t && $DOCKER_COMPOSE exec nginx nginx -s reload) ||
-        ($DOCKER_COMPOSE exec nginx nginx true && $DOCKER_COMPOSE restart nginx) ||
-        ($DOCKER_COMPOSE pull nginx && $DOCKER_COMPOSE down nginx && $DOCKER_COMPOSE up nginx -d)
+    ($DOCKER_COMPOSE exec nginx true &&
+        ($DOCKER_COMPOSE exec nginx nginx -t &&
+            $DOCKER_COMPOSE exec nginx nginx -s reload)) ||
+        ($DOCKER_COMPOSE pull nginx &&
+            $DOCKER_COMPOSE down nginx &&
+            $DOCKER_COMPOSE up nginx -d)
     ;;
 "")
     bash ./nginx.sh $RAW_ARGS
     bash ./adguardhome.sh
-    ($DOCKER_COMPOSE exec nginx nginx -t && $DOCKER_COMPOSE exec nginx nginx -s reload) ||
-        ($DOCKER_COMPOSE exec nginx nginx true && $DOCKER_COMPOSE restart nginx) ||
-        ($DOCKER_COMPOSE pull nginx && $DOCKER_COMPOSE down nginx && $DOCKER_COMPOSE up nginx -d)
-    ($DOCKER_COMPOSE exec adguardhome true && $DOCKER_COMPOSE restart adguardhome) ||
-        ($DOCKER_COMPOSE pull adguardhome && $DOCKER_COMPOSE down adguardhome && $DOCKER_COMPOSE up adguardhome -d)
+    ($DOCKER_COMPOSE exec nginx true &&
+        ($DOCKER_COMPOSE exec nginx nginx -t &&
+            $DOCKER_COMPOSE exec nginx nginx -s reload)) ||
+        ($DOCKER_COMPOSE pull nginx &&
+            $DOCKER_COMPOSE down nginx &&
+            $DOCKER_COMPOSE up nginx -d)
+    ($DOCKER_COMPOSE exec adguardhome true &&
+        ($DOCKER_COMPOSE restart adguardhome)) ||
+        ($DOCKER_COMPOSE pull adguardhome &&
+            $DOCKER_COMPOSE down adguardhome &&
+            $DOCKER_COMPOSE up adguardhome -d)
     ;;
 *)
     echo "Invalid argument: $MORE_ARGS"
