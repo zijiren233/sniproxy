@@ -21,6 +21,7 @@ while getopts "ed:p:nh:" arg; do
         ;;
     e)
         ERROR_LOG="error_log /var/log/nginx/error.log notice;"
+        FORBIDDEN_LOG="1"
         ;;
     p)
         LISTEN_PORTS="$LISTEN_PORTS,$OPTARG"
@@ -92,6 +93,10 @@ fi
 
 if [ -z "$ERROR_LOG" ]; then
     ERROR_LOG="error_log /dev/null;"
+fi
+
+if [ -z "$FORBIDDEN_LOG" ]; then
+    FORBIDDEN_LOG="0"
 fi
 
 if [ -z "$WORKER_CONNECTIONS" ]; then
@@ -457,6 +462,7 @@ events
 stream {
     log_format basic '[\$time_local] \$remote_addr:\$remote_port → \$server_addr:\$server_port | \$ssl_preread_server_name|\$ssl_preread_protocol|\$ssl_preread_alpn_protocols | \$bind -> \$upstream_addr | ↑ \$upstream_bytes_sent | ↓ \$upstream_bytes_received | \$session_time s | \$status';
     map \$status \$loggable {
+        403 $FORBIDDEN_LOG;
         default 1;
     }
     access_log /var/log/nginx/access.log basic if=\$loggable;
