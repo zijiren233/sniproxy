@@ -223,6 +223,14 @@ while IFS= read -r line || [ -n "$line" ]; do
     if [[ $line == \#* ]]; then
         continue
     fi
+    # 跳过adguardhome规则
+    if [[ $line == ^* ]]; then
+        continue
+    fi
+    # 跳过adguardhome密码
+    if [[ $line == \$* ]]; then
+        continue
+    fi
     # 如果是!!开头，则设置全局IP版本
     if [[ $line == \!\!* ]]; then
         GLOBAL_IP_VERSION="${line#!!}"

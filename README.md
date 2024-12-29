@@ -10,6 +10,16 @@
   - 可以重复定义 `#` 行，用来设置此行之后的域名的 IP 地址
   - 多个IP用 `,` 分隔，如 `1.1.1.1,2606:4700:4700::1111`
   - 可以通过 `echo $(curl -s ifconfig.me -4),$(curl -s ifconfig.me -6)` 命令获取本机的IP地址
+- `^` 为 `AdGuardHome` 所用
+  - 用于设置AdGuardHome的上游DNS
+  - 可以设置多个上游DNS，用 `,` 分隔，如 `^1.1.1.1,2606:4700:4700::1111` 表示使用 `1.1.1.1` 和 `2606:4700:4700::1111` 作为上游DNS
+  - 默认为 `h3://dns.google/dns-query,https://dns11.quad9.net/dns-query`
+- `$` 为 `AdGuardHome` 所用
+  - 用于设置AdGuardHome的admin密码
+  - 如果未设置，则默认密码为 `adminadmin`
+  - [需要apache2](https://github.com/AdguardTeam/AdGuardHome/wiki/Configuration#password-reset)
+    - `apt install apache2-utils`
+    - `dnf install httpd-tools`
 - `!` 为 `nginx` 所用
   - 用于指定接下来的域名使用的出口IP是 `ipv4` 还是 `ipv6`
   - 也可以使用多个IP，用 `,` 分隔，如 `!1.1.1.1,2606:4700:4700::1111` 表示使用 `1.1.1.1` 和 `2606:4700:4700::1111` 作为出口IP
@@ -133,12 +143,6 @@ tiktokv.com
 # 直接运行会使用ipv4或ipv6请求代理域名，取决于linux优先级配置
 bash run.sh
 
-# 如果默认使用ipv4请求代理域名
-bash run.sh -4
-
-# 如果默认使用ipv6请求代理域名
-bash run.sh -6
-
 # 如果默认使用绑定ip请求代理域名
 bash run.sh -b <ip>
 
@@ -146,8 +150,6 @@ bash run.sh -b <ip>
 bash run.sh -p <port1>,<port2> -p <port3>
 
 # 如果你修改了domains.txt文件，需要重新启动服务
-# 也需要指定 -4 -6 -b 等参数，如 bash run.sh -4
-bash run.sh
 
 # 如果只想启动sniproxy服务，使用指定dns，不想启动AdGuardHome服务
 bash run.sh -d 1.1.1.1 nginx
