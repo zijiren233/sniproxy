@@ -129,8 +129,8 @@ function BuildPools() {
     for key in "${pools[@]}"; do
         local server="${key%@*}"
         local fields="${key#*@}"
+        local server_count=0
         echo "    upstream $(NewPoolName ${server}) {"
-        echo "        random two least_conn;"
         # 按照,或;分割field并循环
         IFS=',;'
         for server_addr in $fields; do
@@ -138,6 +138,8 @@ function BuildPools() {
             server_addr=$(echo "$server_addr" | xargs)
             # 获取第一个空格之前的地址
             local addr=$(echo "$server_addr" | awk '{print $1}')
+            # 移除可能存在的 resolve 参数
+            server_addr=$(echo "$server_addr" | sed 's/ resolve//g')
 
             # 处理端口范围
             if [[ $addr =~ ^(.*):([0-9]+-[0-9]+)$ ]]; then
@@ -146,16 +148,21 @@ function BuildPools() {
                 local expanded_ports=$(expand_port_range "$port_range")
                 IFS=',' read -ra PORTS <<<"$expanded_ports"
                 for port in "${PORTS[@]}"; do
-                    echo "        server ${host}:${port}${server_addr#$addr};"
+                    echo "        server ${host}:${port}${server_addr#$addr} resolve;"
+                    server_count=$((server_count + 1))
                 done
             else
                 # 如果地址没有端口号，则添加默认端口443
                 if [[ $addr != *:* ]]; then
                     server_addr="${addr}:443${server_addr#$addr}"
                 fi
-                echo "        server ${server_addr};"
+                echo "        server ${server_addr} resolve;"
+                server_count=$((server_count + 1))
             fi
         done
+        if [ $server_count -gt 1 ]; then
+            echo "        random two least_conn;"
+        fi
         echo "    }"
     done
     unset IFS
@@ -516,8 +523,8 @@ if [ "$HOSTS_IPv6_BIND" != "" ]; then
     }"
 fi
 
+HTTP_LISTEN_CONFIG=""
 if [ -z "$DISABLE_HTTP" ]; then
-    HTTP_LISTEN_CONFIG=""
     for port in $(echo $HTTP_PORTS | tr ',' ' '); do
         port=$(echo $port | xargs)
         if [ -z "$port" ]; then
