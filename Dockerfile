@@ -20,7 +20,7 @@ RUN wget https://nginx.org/download/nginx-1.26.3.tar.gz -O /tmp/nginx.tar.gz \
 
 RUN cd /usr/src/nginx \
     && ./configure --with-compat --with-stream --add-dynamic-module=/usr/src/ngx_stream_socks_module \
-    && make modules
+    && make modules -j$(nproc)
 
 FROM nginx:1.26.3
 
