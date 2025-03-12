@@ -26,8 +26,6 @@ FROM nginx:1.26.3
 
 COPY --from=builder /usr/src/nginx/objs/ngx_stream_socks_module.so /usr/lib/nginx/modules/
 
-RUN echo "load_module modules/ngx_stream_socks_module.so;" > /etc/nginx/modules-enabled/50-mod-stream-socks.conf
-
 COPY nginx.sh /nginx.sh
 
 COPY entrypoint.sh /entrypoint.sh

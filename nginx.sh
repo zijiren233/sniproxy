@@ -555,6 +555,8 @@ pid /var/run/nginx.pid;
 $ERROR_LOG
 worker_rlimit_nofile 65535;
 
+load_module modules/ngx_stream_socks_module.so;
+
 events
 {
     use epoll;
