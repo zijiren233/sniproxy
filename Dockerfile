@@ -1,4 +1,32 @@
-FROM nginx:1.26
+FROM nginx:1.26.3 as builder
+
+RUN apt-get update && apt-get install -y \
+    apt-transport-https \
+    build-essential \
+    libpcre3-dev \
+    zlib1g-dev \
+    libssl-dev \
+    wget \
+    git \
+    cmake \
+    autoconf \
+    libtool
+
+RUN git clone https://github.com/oowl/ngx_stream_socks_module /usr/src/ngx_stream_socks_module
+
+RUN wget https://nginx.org/download/nginx-1.26.3.tar.gz -O /tmp/nginx.tar.gz \
+    && tar -zxvf /tmp/nginx.tar.gz -C /usr/src/ \
+    && mv /usr/src/nginx-1.26.3 /usr/src/nginx
+
+RUN cd /usr/src/nginx \
+    && ./configure --with-compat --with-stream --add-dynamic-module=/usr/src/ngx_stream_socks_module \
+    && make modules
+
+FROM nginx:1.26.3
+
+COPY --from=builder /usr/src/nginx/objs/ngx_stream_socks_module.so /usr/lib/nginx/modules/
+
+RUN echo "load_module modules/ngx_stream_socks_module.so;" > /etc/nginx/modules-enabled/50-mod-stream-socks.conf
 
 COPY nginx.sh /nginx.sh
 
