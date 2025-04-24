@@ -15,14 +15,20 @@ if [ $# -gt 0 ]; then
     MORE_ARGS="$@"
 fi
 
-if ! command -v docker-compose &>/dev/null; then
-    if ! command -v docker &>/dev/null; then
-        echo "docker not found"
-        exit 1
-    fi
+if ! command -v docker &>/dev/null; then
+    echo "docker not found"
+    exit 1
+fi
+
+if docker compose version &>/dev/null; then
     DOCKER_COMPOSE="docker compose"
 else
-    DOCKER_COMPOSE="docker-compose"
+    if command -v docker-compose &>/dev/null; then
+        DOCKER_COMPOSE="docker-compose"
+    else
+        echo "Neither docker compose nor docker-compose found"
+        exit 1
+    fi
 fi
 
 case "$MORE_ARGS" in

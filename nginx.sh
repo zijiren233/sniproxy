@@ -131,6 +131,7 @@ function BuildPools() {
         local fields="${key#*@}"
         local server_count=0
         echo "    upstream $(NewPoolName ${server}) {"
+        echo "        zone upstream_shared 64k;"
         # 按照,或;分割field并循环
         IFS=',;'
         for server_addr in $fields; do
@@ -340,6 +341,7 @@ while IFS= read -r line || [ -n "$line" ]; do
     if [[ $DOMAIN == =* ]]; then
         # =开头的域名
         DOMAIN="${DOMAIN#=}"
+        SOURCE="${DOMAIN}"
     elif [[ $DOMAIN == ~* ]]; then
         # ~开头的正则表达式
         true
