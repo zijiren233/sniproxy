@@ -341,7 +341,9 @@ while IFS= read -r line || [ -n "$line" ]; do
     if [[ $DOMAIN == =* ]]; then
         # =开头的域名
         DOMAIN="${DOMAIN#=}"
-        SOURCE="${DOMAIN}"
+        if [ -z "$SOURCE" ] && [ -n "$DEFAULT_SOURCE" ]; then
+            SOURCE="${DOMAIN}"
+        fi
     elif [[ $DOMAIN == ~* ]]; then
         # ~开头的正则表达式
         true
