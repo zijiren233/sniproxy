@@ -85,7 +85,20 @@ if [ -z "$LISTEN_PORTS" ]; then
 fi
 
 if [ -z "$DNS" ]; then
-    DNS="1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]"
+    system_dns=$(grep '^[[:space:]]*nameserver' /etc/resolv.conf 2>/dev/null | grep -v '^#' | awk '{print $2}' | xargs)
+    if [ -n "$system_dns" ]; then
+        processed_dns=""
+        for ip in $system_dns; do
+            if [[ "$ip" == *":"* && "$ip" != \[* ]]; then
+                ip="[$ip]"
+            fi
+            processed_dns="$processed_dns $ip"
+        done
+        system_dns_processed=$(echo "$processed_dns" | xargs)
+        DNS="$system_dns_processed"
+    else
+        DNS="1.1.1.1 8.8.8.8 [2606:4700:4700::1111] [2001:4860:4860::8888]"
+    fi
 fi
 if [[ $DNS != *"valid="* ]]; then
     DNS="$DNS valid=15s"
