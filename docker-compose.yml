@@ -13,7 +13,9 @@ services:
       - ./conf:/opt/adguardhome/conf
 
   nginx:
-    image: nginx:1.28
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: sniproxy-nginx
     restart: unless-stopped
     logging:
@@ -21,4 +23,4 @@ services:
         max-size: "3m"
     network_mode: "host"
     volumes:
-      - ./conf:/etc/nginx
+      - .:/app
