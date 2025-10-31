@@ -3,14 +3,14 @@
 set -e
 
 if [ -z "$DOMAINS_FILE" ]; then
-    DOMAINS_FILE="domains.txt"
+	DOMAINS_FILE="domains.txt"
 fi
 if [ ! -f "$DOMAINS_FILE" ]; then
-    echo "adguardhome: $DOMAINS_FILE not found"
-    exit 1
+	echo "adguardhome: $DOMAINS_FILE not found"
+	exit 1
 fi
 if [ -z "$CONFIG_DIR" ]; then
-    CONFIG_DIR="./conf"
+	CONFIG_DIR="./conf"
 fi
 mkdir -p $CONFIG_DIR
 
@@ -19,107 +19,107 @@ IPS=""
 
 # 读取文件并构建rewrites
 while IFS= read -r line || [ -n "$line" ]; do
-    # trim
-    line=$(echo "$line" | xargs)
-    # 跳过空行
-    if [ -z "$line" ]; then
-        continue
-    fi
-    # 跳过注释行 `//`
-    if [[ $line == //* ]]; then
-        continue
-    fi
-    # 跳过nginx规则 `!`
-    if [[ $line == \!* ]]; then
-        continue
-    fi
-    # 跳过nginx规则 `<`
-    if [[ $line == \<* ]]; then
-        continue
-    fi
-    # 跳过nginx规则 `&`
-    if [[ $line == \&* ]]; then
-        continue
-    fi
-    # 跳过@开头
-    if [[ $line == @* ]]; then
-        continue
-    fi
-    # 跳过nginx多行注释块 ``` 开头
-    if [[ $line == "\`\`\`"* ]]; then
-        while IFS= read -r command_line; do
-            if [[ $(echo "$command_line" | xargs) == "\`\`\`" ]]; then
-                break
-            fi
-        done
-        continue
-    fi
-    # 跳过nginx单行注释块 ` 结尾
-    if [[ $line == *"\`" ]]; then
-        continue
-    fi
-    # 如果是^开头的则是设置adguardhome的上游DNS
-    if [[ $line == ^* ]]; then
-        line="${line#^}"
-        UPSTREAM_DNS=$line
-        continue
-    fi
-    # 如果是$开头，则设置admin密码
-    if [[ $line == \$* ]]; then
-        ADMIN_PASS="${line#$}"
-        continue
-    fi
-    # 检查是否以=开头，如果是则去掉=
-    if [[ $line == =* ]]; then
-        line="${line#=}"
-    fi
-    # 如果是adguardhome规则，则获取IP列表 `#`
-    if [[ $line == \#* ]]; then
-        IPS=${line#*#}
-        IPS=$(echo $IPS | xargs)
-        continue
-    fi
-    if [ -z "$IPS" ]; then
-        echo "adguardhome: ip list empty" 1>&2
-        exit 1
-    fi
+	# trim
+	line=$(echo "$line" | xargs)
+	# 跳过空行
+	if [ -z "$line" ]; then
+		continue
+	fi
+	# 跳过注释行 `//`
+	if [[ $line == //* ]]; then
+		continue
+	fi
+	# 跳过nginx规则 `!`
+	if [[ $line == \!* ]]; then
+		continue
+	fi
+	# 跳过nginx规则 `<`
+	if [[ $line == \<* ]]; then
+		continue
+	fi
+	# 跳过nginx规则 `&`
+	if [[ $line == \&* ]]; then
+		continue
+	fi
+	# 跳过@开头
+	if [[ $line == @* ]]; then
+		continue
+	fi
+	# 跳过nginx多行注释块 ``` 开头
+	if [[ $line == "\`\`\`"* ]]; then
+		while IFS= read -r command_line; do
+			if [[ $(echo "$command_line" | xargs) == "\`\`\`" ]]; then
+				break
+			fi
+		done
+		continue
+	fi
+	# 跳过nginx单行注释块 ` 结尾
+	if [[ $line == *"\`" ]]; then
+		continue
+	fi
+	# 如果是^开头的则是设置adguardhome的上游DNS
+	if [[ $line == ^* ]]; then
+		line="${line#^}"
+		UPSTREAM_DNS=$line
+		continue
+	fi
+	# 如果是$开头，则设置admin密码
+	if [[ $line == \$* ]]; then
+		ADMIN_PASS="${line#$}"
+		continue
+	fi
+	# 检查是否以=开头，如果是则去掉=
+	if [[ $line == =* ]]; then
+		line="${line#=}"
+	fi
+	# 如果是adguardhome规则，则获取IP列表 `#`
+	if [[ $line == \#* ]]; then
+		IPS=${line#*#}
+		IPS=$(echo $IPS | xargs)
+		continue
+	fi
+	if [ -z "$IPS" ]; then
+		echo "adguardhome: ip list empty" 1>&2
+		exit 1
+	fi
 
-    for IP in $(echo $IPS | sed "s/,/ /g"); do
-        IP=$(echo $IP | xargs)
-        if [ -z "$IP" ]; then
-            continue
-        fi
-        # 把line按照@分割，第一个为域名，不需要后面的，且需要trim
-        DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
-        # 将格式化的行添加到REWRITES变量
-        if [ -z "$REWRITES" ]; then
-            REWRITES="$(echo -e "    - domain: \"$DOMAIN\"\n      answer: $IP\n    - domain: \"*.$DOMAIN\"\n      answer: $IP")"
-        else
-            REWRITES="$(echo -e "$REWRITES\n    - domain: \"$DOMAIN\"\n      answer: $IP\n    - domain: \"*.$DOMAIN\"\n      answer: $IP")"
-        fi
-    done
+	for IP in $(echo $IPS | sed "s/,/ /g"); do
+		IP=$(echo $IP | xargs)
+		if [ -z "$IP" ]; then
+			continue
+		fi
+		# 把line按照@分割，第一个为域名，不需要后面的，且需要trim
+		DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
+		# 将格式化的行添加到REWRITES变量
+		if [ -z "$REWRITES" ]; then
+			REWRITES="$(echo -e "    - domain: \"$DOMAIN\"\n      answer: $IP\n    - domain: \"*.$DOMAIN\"\n      answer: $IP")"
+		else
+			REWRITES="$(echo -e "$REWRITES\n    - domain: \"$DOMAIN\"\n      answer: $IP\n    - domain: \"*.$DOMAIN\"\n      answer: $IP")"
+		fi
+	done
 done <"$DOMAINS_FILE"
 
 if [ -z "$UPSTREAM_DNS" ]; then
-    UPSTREAM_DNS="h3://dns.google/dns-query,https://dns11.quad9.net/dns-query"
+	UPSTREAM_DNS="h3://dns.google/dns-query,https://dns11.quad9.net/dns-query"
 fi
 if [ -z "$FALLBACK_DNS" ]; then
-    FALLBACK_DNS="https://dns.google/dns-query,tls://dns11.quad9.net"
+	FALLBACK_DNS="https://dns.google/dns-query,tls://dns11.quad9.net"
 fi
 if [ -z "$BOOTSTRAP_DNS" ]; then
-    BOOTSTRAP_DNS="9.9.9.10,149.112.112.10,2620:fe::10,2620:fe::fe:10"
+	BOOTSTRAP_DNS="9.9.9.10,149.112.112.10,2620:fe::10,2620:fe::fe:10"
 fi
 if [ -z "$ADMIN_USER" ]; then
-    ADMIN_USER="admin"
+	ADMIN_USER="admin"
 fi
 if [ -z "$ADMIN_PASS" ]; then
-    ADMIN_PASS="adminadmin"
+	ADMIN_PASS="adminadmin"
 fi
 
 if [ "$ADMIN_PASS" == "adminadmin" ]; then
-    PASSWORD_HASH="\$2a\$10\$epwcV.l4.bGQ9iL69D6dC.WEuPx5Sj6rONoN.XJnr1eW5EFm0DHy2"
+	PASSWORD_HASH="\$2a\$10\$epwcV.l4.bGQ9iL69D6dC.WEuPx5Sj6rONoN.XJnr1eW5EFm0DHy2"
 else
-    PASSWORD_HASH=$(htpasswd -B -C 10 -n -b $ADMIN_USER $ADMIN_PASS | awk -F':' '{print $2}')
+	PASSWORD_HASH=$(htpasswd -B -C 10 -n -b $ADMIN_USER $ADMIN_PASS | awk -F':' '{print $2}')
 fi
 
 readonly tmp_file=$(mktemp)

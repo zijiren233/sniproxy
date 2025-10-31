@@ -23,6 +23,15 @@
 - `!` 为 `nginx` 所用
   - 用于指定接下来的域名使用的出口IP是 `ipv4` 还是 `ipv6`
   - 也可以使用多个IP，用 `,` 分隔，如 `!1.1.1.1,2606:4700:4700::1111` 表示使用 `1.1.1.1` 和 `2606:4700:4700::1111` 作为出口IP
+  - 支持使用网卡名称，格式为 `!device:网卡名称 ipv4/ipv6`，如 `!device:warp ipv4` 表示使用 `warp` 网卡的IPv4地址作为出口IP
+    - 可以省略IP版本，默认获取网卡的**所有IP地址**（包括IPv4和IPv6），如 `!device:warp` 会使用 `warp` 网卡的所有IP
+    - 指定IP版本只获取对应版本的IP，如 `!device:warp ipv4` 只获取IPv4地址，`!device:warp ipv6` 只获取IPv6地址
+    - 可以配置多个网卡，如 `!device:warp ipv4,device:eth0 ipv6`
+    - 支持混合配置IP地址和网卡，如 `!1.1.1.1,device:warp ipv4,2.2.2.2`
+    - **注意：单独的 `ipv4`/`ipv6` 关键字不能与具体的IP地址或device配置混合使用**
+      - ✅ 正确：`!ipv4` 或 `!ipv6` 或 `!1.1.1.1,2.2.2.2` 或 `!device:warp,device:eth0`
+      - ❌ 错误：`!ipv4,1.1.1.1` 或 `!ipv6,device:warp`
+    - entrypoint会自动监控网卡IP变更，当检测到变更时会自动重新生成配置并重载nginx
   - 如果遇到空行会重置为默认
 - `@` 为 `nginx` 所用
   - 定义在每个域名后面，用于指定此域名的源服务器地址
@@ -71,6 +80,8 @@ server {
 ````
 
 ### `domains.txt` 示例
+
+#### 示例1：使用IP地址
 
 前提条件：
 
@@ -132,6 +143,39 @@ ibyteimg.com
 sgpstatp.com
 snssdk.com
 tik-tokapi.com
+tiktok.com
+tiktokcdn.com
+tiktokv.com
+```
+
+#### 示例2：使用网卡名称
+
+前提条件：
+
+- 本地有两个网卡
+- `warp` 网卡可以解锁Netflix（使用IPv6）
+- `eth0` 网卡可以解锁Disney和TikTok
+
+```txt
+// Netflix - 使用warp网卡的IPv6地址
+!device:warp ipv6
+netflix.com
+netflix.net
+nflximg.com
+nflximg.net
+nflxvideo.net
+nflxso.net
+nflxext.com
+
+// Disney - 使用eth0网卡的IPv4地址
+!device:eth0 ipv4
+disney.com
+disneyjunior.com
+disneyplus.com
+disneystreaming.com
+
+// TikTok - 使用eth0网卡的所有IP地址（IPv4和IPv6）
+!device:eth0
 tiktok.com
 tiktokcdn.com
 tiktokv.com
