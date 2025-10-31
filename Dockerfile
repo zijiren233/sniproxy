@@ -7,7 +7,7 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /nginx.sh /entrypoint.sh
 
 RUN apt-get update && \
-    apt-get install -y inotify-tools bash && \
+    apt-get install -y inotify-tools bash iproute2 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

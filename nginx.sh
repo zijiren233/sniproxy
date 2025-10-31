@@ -226,7 +226,7 @@ function get_device_ip() {
 			ipv4=$(ip -4 addr show dev "$device" 2>/dev/null | grep -o 'inet [0-9.]*' | head -n 1 | awk '{print $2}')
 		fi
 		if [ "$ip_version" = "all" ] || [ "$ip_version" = "ipv6" ]; then
-			ipv6=$(ip -6 addr show dev "$device" scope global 2>/dev/null | grep -o 'inet6 [0-9a-f:]*' | head -n 1 | awk '{print $2}')
+			ipv6=$(ip -6 addr show dev "$device" 2>/dev/null | grep -o 'inet6 [0-9a-f:]*' | head -n 1 | awk '{print $2}')
 		fi
 	else
 		# macOS/BSD: 使用ifconfig
