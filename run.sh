@@ -4,6 +4,11 @@ set -ex
 
 RAW_ARGS="$@"
 
+# 写入 .env 文件
+cat > .env <<EOF
+NGINX_ARGS=$RAW_ARGS
+EOF
+
 # 如果参数中有除 ed:p:nh: 之外的参数，则传递给 docker-compose
 if [ $# -gt 0 ]; then
 	while getopts "ed:p:nh:" arg; do
@@ -41,7 +46,6 @@ adguardhome)
 			$DOCKER_COMPOSE up -d adguardhome)
 	;;
 nginx)
-	bash ./nginx.sh $RAW_ARGS
 	($DOCKER_COMPOSE exec nginx true &&
 		($DOCKER_COMPOSE exec nginx nginx -t &&
 			$DOCKER_COMPOSE exec nginx nginx -s reload)) ||
@@ -50,7 +54,6 @@ nginx)
 			$DOCKER_COMPOSE up -d nginx)
 	;;
 "")
-	bash ./nginx.sh $RAW_ARGS
 	bash ./adguardhome.sh
 	($DOCKER_COMPOSE exec nginx true &&
 		($DOCKER_COMPOSE exec nginx nginx -t &&

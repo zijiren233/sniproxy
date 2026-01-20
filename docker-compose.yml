@@ -22,5 +22,9 @@ services:
       options:
         max-size: "3m"
     network_mode: "host"
+    env_file:
+      - .env
+    environment:
+      - DOMAINS_FILE=/app/domains.txt
     volumes:
       - .:/app

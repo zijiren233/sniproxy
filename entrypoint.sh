@@ -91,7 +91,7 @@ echo "Extracting devices from domains file..."
 update_devices_file
 
 echo "Generating nginx configuration..."
-bash /nginx.sh
+bash /nginx.sh $NGINX_ARGS
 if [ $? -ne 0 ]; then
 	echo "generate nginx.conf failed"
 	exit 1
@@ -120,7 +120,7 @@ DEVICE_IPS_HASH=$(get_device_ips_hash)
 		update_devices_file
 
 		# 重新生成nginx配置
-		bash /nginx.sh
+		bash /nginx.sh $NGINX_ARGS
 		if [ $? -ne 0 ]; then
 			echo "generate nginx.conf failed"
 			echo "domains content:"
@@ -145,7 +145,7 @@ DEVICE_IPS_HASH=$(get_device_ips_hash)
 
 		if [ "$NEW_HASH" != "$DEVICE_IPS_HASH" ] && [ -n "$NEW_HASH" ]; then
 			echo "Network device IP changed, regenerating config..."
-			bash /nginx.sh
+			bash /nginx.sh $NGINX_ARGS
 			if [ $? -ne 0 ]; then
 				echo "generate nginx.conf failed after device change"
 				continue

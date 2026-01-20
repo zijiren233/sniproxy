@@ -4,6 +4,11 @@ set -ex
 
 RAW_ARGS="$@"
 
+# 写入 .env 文件
+cat > .env <<EOF
+NGINX_ARGS=$RAW_ARGS
+EOF
+
 if ! command -v docker &>/dev/null; then
     echo "docker not found"
     exit 1
@@ -19,8 +24,6 @@ else
         exit 1
     fi
 fi
-
-bash ./nginx.sh $RAW_ARGS
 
 ($DOCKER_COMPOSE exec nginx true &&
     ($DOCKER_COMPOSE exec nginx nginx -t &&
