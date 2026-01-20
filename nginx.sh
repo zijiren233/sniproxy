@@ -39,6 +39,13 @@ while getopts "ed:p:nh:" arg; do
 	esac
 done
 
+# 安全的 trim 函数 - 删除前后空格，不会触发通配符展开
+function safe_trim() {
+	local str="$1"
+	# 使用 sed 删除前后空格，避免通配符展开
+	echo "$str" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+}
+
 # 展开端口范围
 function expand_port_range() {
 	local ports=$1
@@ -49,7 +56,7 @@ function expand_port_range() {
 
 	for range in "${PORT_RANGES[@]}"; do
 		# 去除空格
-		range=$(echo "$range" | xargs)
+		range=$(safe_trim "$range")
 		if [[ $range =~ ^([0-9]+)-([0-9]+)$ ]]; then
 			# 是端口范围
 			start="${BASH_REMATCH[1]}"
@@ -149,7 +156,7 @@ function BuildPools() {
 		IFS=',;'
 		for server_addr in $fields; do
 			# trim空格
-			server_addr=$(echo "$server_addr" | xargs)
+			server_addr=$(safe_trim "$server_addr")
 			# 获取第一个空格之前的地址
 			local addr=$(echo "$server_addr" | awk '{print $1}')
 			# 移除可能存在的 resolve 参数
@@ -292,7 +299,7 @@ function parse_device_config() {
 	# 按逗号分割配置
 	IFS=',' read -ra CONFIGS <<<"$config"
 	for cfg in "${CONFIGS[@]}"; do
-		cfg=$(echo "$cfg" | xargs)
+		cfg=$(safe_trim "$cfg")
 
 		# 检查是否是device:开头
 		if [[ $cfg == device:* ]]; then
@@ -338,7 +345,7 @@ function validate_standalone_ip_version() {
 
 	IFS=',' read -ra CONFIGS <<<"$config"
 	for cfg in "${CONFIGS[@]}"; do
-		cfg=$(echo "$cfg" | xargs)
+		cfg=$(safe_trim "$cfg")
 
 		if [[ $cfg == "ipv4" ]] || [[ $cfg == "ipv6" ]]; then
 			# 单独的ipv4/ipv6关键字
@@ -364,7 +371,7 @@ function check_ip_version() {
 
 	IFS=',' read -ra IP_LIST <<<"$ips"
 	for ip in "${IP_LIST[@]}"; do
-		ip=$(echo "$ip" | xargs)
+		ip=$(safe_trim "$ip")
 		if [[ $ip =~ ^\[.*\]$ ]] || [[ $ip =~ : ]]; then
 			is_ipv6=1
 		else
@@ -385,8 +392,8 @@ function check_ip_version() {
 }
 
 while IFS= read -r line || [ -n "$line" ]; do
-	# trim
-	line=$(echo "$line" | xargs)
+	# trim - 使用 sed 安全地删除前后空格，避免通配符展开
+	line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 	# 如果是空行则清空IP版本和速率限制以及默认SOURCE
 	if [ -z "$line" ]; then
 		IP_VERSION="$GLOBAL_IP_VERSION"
@@ -455,10 +462,10 @@ while IFS= read -r line || [ -n "$line" ]; do
 	if [[ $line == \&* ]]; then
 		# 去掉&并trim
 		IPS="${line#&}"
-		IPS=$(echo $IPS | xargs)
+		IPS=$(safe_trim "$IPS")
 		# 按照,分割IP并添加到ALLOW中
 		for IP in $(echo $IPS | sed "s/,/ /g"); do
-			IP=$(echo $IP | xargs)
+			IP=$(safe_trim "$IP")
 			if [ -z "$IP" ]; then
 				continue
 			fi
@@ -474,7 +481,7 @@ while IFS= read -r line || [ -n "$line" ]; do
 	if [[ $line == "\`\`\`"* ]]; then
 		content=""
 		while IFS= read -r command_line; do
-			if [[ $(echo "$command_line" | xargs) == "\`\`\`" ]]; then
+			if [[ $(safe_trim "$command_line") == "\`\`\`" ]]; then
 				break
 			fi
 			if [ -n "$content" ]; then
@@ -495,7 +502,7 @@ while IFS= read -r line || [ -n "$line" ]; do
 	# 如果是单行注释块 ` 结尾
 	if [[ $line == *"\`" ]]; then
 		# 提取`和`之间的内容
-		content=$(echo "$line" | sed 's/\`\(.*\)\`/\1/' | xargs)
+		content=$(echo "$line" | sed 's/\`\(.*\)\`/\1/;s/^[[:space:]]*//;s/[[:space:]]*$//')
 		if [ -n "$content" ]; then
 			if [ -n "$EXTRA_STREAM_SERVERS" ]; then
 				EXTRA_STREAM_SERVERS=$(echo -e "$EXTRA_STREAM_SERVERS\n\n    $content")
@@ -507,8 +514,8 @@ while IFS= read -r line || [ -n "$line" ]; do
 	fi
 
 	# 把DOMAIN按照@分割，第一个为域名，第二个为SOURCE，且需要trim
-	DOMAIN=$(echo $line | awk -F@ '{print $1}' | xargs)
-	SOURCE=$(echo $line | awk -F@ '{print $2}' | xargs)
+	DOMAIN=$(echo "$line" | awk -F@ '{print $1}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+	SOURCE=$(echo "$line" | awk -F@ '{print $2}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
 	# 检查DOMAIN是否有空格
 	if [[ $DOMAIN == *" "* ]]; then
@@ -582,7 +589,7 @@ while IFS= read -r line || [ -n "$line" ]; do
 			split_var_found=""
 			while IFS='=' read -r key value; do
 				if [ "$key" = "$bind_key" ]; then
-					split_var_found=$(echo "$value" | xargs)
+					split_var_found=$(safe_trim "$value")
 					break
 				fi
 			done <<<"$used_bind_groups"
