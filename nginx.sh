@@ -14,7 +14,7 @@ if [ -z "$CONFIG_DIR" ]; then
 fi
 mkdir -p $CONFIG_DIR
 
-while getopts "ed:p:nh:" arg; do
+while getopts "ed:p:nh:j:" arg; do
 	case $arg in
 	d)
 		DNS="$OPTARG"
@@ -31,6 +31,9 @@ while getopts "ed:p:nh:" arg; do
 		;;
 	h)
 		HTTP_PORTS="$OPTARG"
+		;;
+	j)
+		WORKER_PROCESSES="$OPTARG"
 		;;
 	?)
 		echo "unkonw argument: $arg"
@@ -123,6 +126,10 @@ if [ -z "$WORKER_CONNECTIONS" ]; then
 	WORKER_CONNECTIONS="65535"
 fi
 
+if [ -z "$WORKER_PROCESSES" ]; then
+	WORKER_PROCESSES="auto"
+fi
+
 if [ -z "$HTTP_PORTS" ]; then
 	HTTP_PORTS="80"
 fi
@@ -151,7 +158,7 @@ function BuildPools() {
 		local fields="${key#*@}"
 		local server_count=0
 		echo "    upstream $(NewPoolName ${server}) {"
-		echo "        zone upstream_shared 64k;"
+		echo "        zone upstream_shared 512k;"
 		# 按照,或;分割field并循环
 		IFS=',;'
 		for server_addr in $fields; do
@@ -740,7 +747,7 @@ readonly tmp_file=$(mktemp)
 
 cat <<EOF >$tmp_file
 user nginx;
-worker_processes auto;
+worker_processes $WORKER_PROCESSES;
 pid /var/run/nginx.pid;
 $ERROR_LOG
 worker_rlimit_nofile 65535;

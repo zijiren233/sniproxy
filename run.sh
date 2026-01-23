@@ -9,9 +9,9 @@ cat > .env <<EOF
 NGINX_ARGS=$RAW_ARGS
 EOF
 
-# 如果参数中有除 ed:p:nh: 之外的参数，则传递给 docker-compose
+# 如果参数中有除 ed:p:nh:j: 之外的参数，则传递给 docker-compose
 if [ $# -gt 0 ]; then
-	while getopts "ed:p:nh:" arg; do
+	while getopts "ed:p:nh:j:" arg; do
 		case $arg in
 		?) ;;
 		esac
