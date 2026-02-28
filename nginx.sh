@@ -139,12 +139,13 @@ pools=()
 function AddPool() {
 	local e
 	local field="$2"
+	local ip_version="${3:-}" # 第三个参数：IP版本 (ipv4/ipv6)
 	for e in "${pools[@]}"; do
 		if [[ "$e" == "$1@"* ]]; then
 			return 0
 		fi
 	done
-	pools+=("$1@$field")
+	pools+=("$1@$field@$ip_version")
 }
 
 # 使用短sha1作为pool名称
@@ -154,11 +155,23 @@ function NewPoolName() {
 
 function BuildPools() {
 	for key in "${pools[@]}"; do
-		local server="${key%@*}"
-		local fields="${key#*@}"
+		local server="${key%%@*}"
+		local rest="${key#*@}"
+		local fields="${rest%%@*}"
+		local ip_version="${rest#*@}"
+		# 如果 ip_version 和 fields 相同，说明没有 IP 版本
+		if [[ "$ip_version" == "$fields" ]]; then
+			ip_version=""
+		fi
 		local server_count=0
 		echo "    upstream $(NewPoolName ${server}) {"
 		echo "        zone upstream_shared 512k;"
+		# 根据 IP 版本添加 resolver 指令
+		if [[ "$ip_version" == "ipv4" ]]; then
+			echo "        resolver $DNS ipv4=on ipv6=off;"
+		elif [[ "$ip_version" == "ipv6" ]]; then
+			echo "        resolver $DNS ipv4=off ipv6=on;"
+		fi
 		# 按照,或;分割field并循环
 		IFS=',;'
 		for server_addr in $fields; do
@@ -559,22 +572,21 @@ while IFS= read -r line || [ -n "$line" ]; do
 		SOURCE="$DEFAULT_SOURCE"
 	fi
 
-	if [ "$SOURCE" != "" ]; then
-		AddPool "$DOMAIN" "$SOURCE"
-		SOURCES=$(echo -e "$SOURCES\n        $DOMAIN $(NewPoolName $DOMAIN);")
-	fi
-
 	# 如果速录限制不为空，则添加到RATES变量中
 	if [ "$RATE" != "" ]; then
 		RATES=$(echo -e "$RATES\n        $DOMAIN $RATE;")
 	fi
 
+	# 标准化 IP_VERSION 为 ipv4/ipv6 或空
+	RESOLVER_IP_VERSION=""
 	case $IP_VERSION in
 	"ipv4")
 		HOSTS_IPv4="$HOSTS_IPv4 $DOMAIN"
+		RESOLVER_IP_VERSION="ipv4"
 		;;
 	"ipv6")
 		HOSTS_IPv6="$HOSTS_IPv6 $DOMAIN"
+		RESOLVER_IP_VERSION="ipv6"
 		;;
 	"")
 		HOSTS_DEFAULT="$HOSTS_DEFAULT $DOMAIN"
@@ -629,11 +641,18 @@ while IFS= read -r line || [ -n "$line" ]; do
 		# 根据IP版本添加到对应的HOSTS变量
 		if [ "$ip_version" = "ipv4" ]; then
 			HOSTS_IPv4_BIND="$HOSTS_IPv4_BIND $DOMAIN"
+			RESOLVER_IP_VERSION="ipv4"
 		else
 			HOSTS_IPv6_BIND="$HOSTS_IPv6_BIND $DOMAIN"
+			RESOLVER_IP_VERSION="ipv6"
 		fi
 		;;
 	esac
+
+	if [ "$SOURCE" != "" ]; then
+		AddPool "$DOMAIN" "$SOURCE" "$RESOLVER_IP_VERSION"
+		SOURCES=$(echo -e "$SOURCES\n        $DOMAIN $(NewPoolName $DOMAIN);")
+	fi
 done <"$DOMAINS_FILE"
 
 if [ -n "$ALLOW" ]; then
