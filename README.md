@@ -186,21 +186,21 @@ tiktokv.com
 
 ```bash
 # 直接运行会使用ipv4或ipv6请求代理域名，取决于linux优先级配置
-bash run.sh
+bash run-nginx.sh
 
 # 如果默认使用绑定ip请求代理域名
-bash run.sh -b <ip>
+bash run-nginx.sh -b <ip>
 
 # 默认绑定443端口，如果要绑定其他端口或多个端口，则使用 -p 参数
-bash run.sh -p <port1>,<port2> -p <port3>
+bash run-nginx.sh -p <port1>,<port2> -p <port3>
 
-# 如果你修改了domains.txt文件，需要重新启动服务
+# 如果你修改了domains.txt文件，会自动重载不需要重启
 
-# 如果只想启动sniproxy服务，使用指定dns，不想启动AdGuardHome服务
-bash run.sh -d 1.1.1.1 nginx
+# 使用指定dns
+bash run-nginx.sh -d 1.1.1.1
 
-# 如果只想启动AdGuardHome服务，不想启动sniproxy服务
-bash run.sh adguardhome
+# 启动AdGuardHome服务
+bash run-adguardhome.sh
 ```
 
 运行后，nginx会监听80和443端口，AdGuardHome会监听53和8080端口，其中53端口为dns端口，`8080` 端口为web管理端口。
